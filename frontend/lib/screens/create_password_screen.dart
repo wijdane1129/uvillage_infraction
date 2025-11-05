@@ -6,7 +6,6 @@ import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/password_strength_indicator.dart';
 import '../widgets/password_requirements.dart';
-import 'forgot_password_screen.dart';
 
 class CreatePasswordScreen extends ConsumerStatefulWidget {
   const CreatePasswordScreen({super.key});

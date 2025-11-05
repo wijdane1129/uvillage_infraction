@@ -5,7 +5,6 @@ import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
 import 'create_password_screen.dart';
-import 'forgot_password_screen.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -16,14 +15,14 @@ class SignUpScreen extends ConsumerStatefulWidget {
 
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _userNameController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   @override
   void dispose() {
-    _userNameController.dispose();
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -33,7 +32,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   void _handleSignUp() {
     if (_formKey.currentState!.validate()) {
       final request = CreateAccountRequest(
-        username: _userNameController.text,
+        fullName: _fullNameController.text,
         email: _emailController.text,
         password: _passwordController.text,
       );
@@ -88,7 +87,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 child: Column(
                   children: [
                     _buildTextField(
-                      controller: _userNameController,
+                      controller: _fullNameController,
                       label: 'Full Name',
                       hintText: 'Enter your full name',
                       validator: (value) {

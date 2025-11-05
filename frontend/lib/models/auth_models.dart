@@ -1,14 +1,14 @@
 class CreateAccountRequest {
-  final String username;
+  final String fullName;
   final String email;
   final String password;
   CreateAccountRequest({
-    required this.username,
+    required this.fullName,
     required this.email,
     required this.password,
   });
   Map<String, dynamic> toJson() {
-    return {'username': username, 'email': email, 'password': password};
+    return {'fullName': fullName, 'email': email, 'password': password};
   }
 }
 

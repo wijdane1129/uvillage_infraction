@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'screens/create_account_screen.dart';
-import 'screens/forgot_password_screen.dart';
-import 'screens/create_password_screen.dart';
 import 'screens/verification_code_screen.dart';
 
 void main() {
