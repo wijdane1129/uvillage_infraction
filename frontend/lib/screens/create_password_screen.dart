@@ -8,7 +8,9 @@ import '../widgets/password_strength_indicator.dart';
 import '../widgets/password_requirements.dart';
 
 class CreatePasswordScreen extends ConsumerStatefulWidget {
-  const CreatePasswordScreen({super.key});
+  final String code;
+
+  const CreatePasswordScreen({super.key, required this.code});
 
   @override
   ConsumerState<CreatePasswordScreen> createState() =>
@@ -42,7 +44,7 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
       final request = ResetPasswordRequest(
         password: _passwordController.text,
         confirmPassword: _confirmPasswordController.text,
-        token: '', // Add token from previous screen
+        token: widget.code,
       );
       ref.read(authProvider.notifier).resetPassword(request);
     }
@@ -90,6 +92,9 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              // Note: token input removed. The verification screen
+              // passes the 6-digit code to this screen via the
+              // required `code` constructor parameter.
               // Title and Subtitle
               Text(
                 'Create New Password',
@@ -125,8 +130,10 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
                               : Icons.visibility,
                           color: AppTheme.textSecondary,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed:
+                            () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                       ),
                     ),
                   ),
@@ -149,9 +156,10 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _passwordsMatch
-                            ? AppTheme.successGreen
-                            : AppTheme.borderColor,
+                        color:
+                            _passwordsMatch
+                                ? AppTheme.successGreen
+                                : AppTheme.borderColor,
                         width: 1.5,
                       ),
                     ),
@@ -162,16 +170,19 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
                       decoration: InputDecoration(
                         hintText: 'Confirm password',
                         border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         suffixIcon: Padding(
                           padding: const EdgeInsets.only(right: 12),
-                          child: _passwordsMatch
-                              ? const Icon(
-                                  Icons.check_circle,
-                                  color: AppTheme.successGreen,
-                                )
-                              : null,
+                          child:
+                              _passwordsMatch
+                                  ? const Icon(
+                                    Icons.check_circle,
+                                    color: AppTheme.successGreen,
+                                  )
+                                  : null,
                         ),
                       ),
                     ),
@@ -181,8 +192,11 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Row(
                         children: const [
-                          Icon(Icons.check_circle,
-                              size: 16, color: AppTheme.successGreen),
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: AppTheme.successGreen,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Passwords match',

@@ -91,6 +91,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  Future<AuthResponse> verifyResetCode(VerificationCodeRequest request) async {
+    state = state.copyWith(isLoading: true, error: null);
+    final response = await _authService.verifyResetCode(request);
+    state = state.copyWith(
+      isLoading: false,
+      lastResponse: response,
+      successMessage: response.success ? response.message : null,
+      error: !response.success ? response.message : null,
+    );
+    return response;
+  }
+
   void clearMessages() {
     state = state.copyWith(error: null, successMessage: null);
   }

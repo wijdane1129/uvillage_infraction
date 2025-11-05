@@ -4,7 +4,6 @@ import '../config/app_theme.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
-import 'create_password_screen.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -35,6 +34,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         fullName: _fullNameController.text,
         email: _emailController.text,
         password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
       );
       ref.read(authProvider.notifier).signUp(request);
     }
@@ -107,8 +107,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         if (value?.isEmpty ?? true) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                            .hasMatch(value!)) {
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
                           return 'Please enter a valid email';
                         }
                         return null;
@@ -184,13 +183,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => const CreatePasswordScreen(),
-                        ),
-                      );
-                    },
+                    onTap: () => Navigator.of(context).pop(),
                     child: const Text(
                       'Sign In',
                       style: TextStyle(
@@ -220,19 +213,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        Text(label, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 8),
         TextFormField(
-          controller: controller, 
+          controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
-          decoration: InputDecoration(
-            hintText: hintText,
-          ),
+          decoration: InputDecoration(hintText: hintText),
         ),
       ],
     );

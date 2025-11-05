@@ -56,4 +56,16 @@ class AuthService {
       return AuthResponse(success: false, message: e.toString());
     }
   }
+
+  Future<AuthResponse> verifyResetCode(VerificationCodeRequest request) async {
+    try {
+      final response = await _apiService.post(
+        '/auth/verify-reset-code',
+        request.toJson(),
+      );
+      return AuthResponse.fromJson(response.data);
+    } catch (e) {
+      return AuthResponse(success: false, message: e.toString());
+    }
+  }
 }

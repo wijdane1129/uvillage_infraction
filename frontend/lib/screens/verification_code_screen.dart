@@ -4,15 +4,13 @@ import '../config/app_theme.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
+import 'create_password_screen.dart';
 import 'dart:async';
 
 class VerificationCodeScreen extends ConsumerStatefulWidget {
   final String email;
 
-  const VerificationCodeScreen({
-    super.key,
-    required this.email,
-  });
+  const VerificationCodeScreen({super.key, required this.email});
 
   @override
   ConsumerState<VerificationCodeScreen> createState() =>
@@ -24,13 +22,20 @@ class _VerificationCodeScreenState
   late List<TextEditingController> _codeControllers;
   late List<FocusNode> _focusNodes;
   late Timer _timer;
-  int _secondsRemaining = 272; // 4:32
+  int _secondsRemaining = 600; // 4:32
 
   @override
   void initState() {
     super.initState();
-    _codeControllers = List.generate(5, (_) => TextEditingController());
-    _focusNodes = List.generate(5, (_) => FocusNode());
+    // Verification codes are 6 digits (backend generates 6-digit codes).
+    // Use a list of controllers and focus nodes so we can show six
+    // separate input boxes and support paste/distribution and auto-advance.
+    const int codeLength = 6;
+    _codeControllers = List.generate(
+      codeLength,
+      (_) => TextEditingController(),
+    );
+    _focusNodes = List.generate(codeLength, (_) => FocusNode());
     _startTimer();
   }
 
@@ -52,16 +57,31 @@ class _VerificationCodeScreenState
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  String get _verificationCode =>
-      _codeControllers.map((c) => c.text).join();
+  String get _verificationCode => _codeControllers.map((c) => c.text).join();
 
   void _handleVerification() {
-    if (_verificationCode.length == 5) {
+    if (_verificationCode.length == _codeControllers.length) {
       final request = VerificationCodeRequest(
         email: widget.email,
         code: _verificationCode,
       );
-      ref.read(authProvider.notifier).verifyCode(request);
+      // Call verifyResetCode to validate reset codes for password reset flow.
+      ref.read(authProvider.notifier).verifyResetCode(request).then((response) {
+        if (response.success) {
+          // Navigate to CreatePasswordScreen and pass the verified 6-digit code
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CreatePasswordScreen(code: _verificationCode),
+            ),
+          );
+        } else {
+          // show error from response
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(response.message)));
+        }
+      });
     }
   }
 
@@ -145,12 +165,12 @@ class _VerificationCodeScreenState
                 ],
               ),
               const SizedBox(height: 40),
-              // Code Input Fields
+              // Code Input Fields (six separate boxes)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(5, (index) {
+                children: List.generate(_codeControllers.length, (index) {
                   return SizedBox(
-                    width: 50,
+                    width: 44,
                     height: 60,
                     child: TextField(
                       controller: _codeControllers[index],
@@ -164,9 +184,10 @@ class _VerificationCodeScreenState
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: _codeControllers[index].text.isEmpty
-                                ? AppTheme.borderColor
-                                : AppTheme.purpleAccent,
+                            color:
+                                _codeControllers[index].text.isEmpty
+                                    ? AppTheme.borderColor
+                                    : AppTheme.purpleAccent,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -179,7 +200,23 @@ class _VerificationCodeScreenState
                       ),
                       onChanged: (value) {
                         setState(() {});
-                        if (value.isNotEmpty && index < 4) {
+                        // If user pasted the full code into one box, distribute it.
+                        if (value.length > 1) {
+                          final chars = value.split('');
+                          for (
+                            var i = 0;
+                            i < chars.length && i < _codeControllers.length;
+                            i++
+                          ) {
+                            _codeControllers[i].text = chars[i];
+                          }
+                          // move focus to last
+                          _focusNodes.last.requestFocus();
+                          return;
+                        }
+
+                        if (value.isNotEmpty &&
+                            index < _codeControllers.length - 1) {
                           _focusNodes[index + 1].requestFocus();
                         }
                       },
@@ -240,18 +277,20 @@ class _VerificationCodeScreenState
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
                   GestureDetector(
-                    onTap: _secondsRemaining == 0
-                        ? () {
-                            setState(() => _secondsRemaining = 272);
-                            _startTimer();
-                          }
-                        : null,
+                    onTap:
+                        _secondsRemaining == 0
+                            ? () {
+                              setState(() => _secondsRemaining = 272);
+                              _startTimer();
+                            }
+                            : null,
                     child: Text(
                       'Resend',
                       style: TextStyle(
-                        color: _secondsRemaining == 0
-                            ? AppTheme.cyanAccent
-                            : AppTheme.textSecondary,
+                        color:
+                            _secondsRemaining == 0
+                                ? AppTheme.cyanAccent
+                                : AppTheme.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

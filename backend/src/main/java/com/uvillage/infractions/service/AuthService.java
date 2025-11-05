@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Random;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
@@ -52,6 +51,8 @@ public class AuthService {
         User user = User.builder()
             .email(request.getEmail())
             .fullName(request.getFullName())
+            // Use email as username by default to satisfy DB NOT NULL/UNIQUE constraint
+            .username(request.getEmail())
             .password(passwordEncoder.encode(request.getPassword()))
             .build();
 
@@ -73,12 +74,21 @@ public class AuthService {
             logger.warn("Password reset requested for non-existing email:{}",request.getEmail());
             return;
         }
-        String resetToken=generateResetToken();
-        user.setResetToken(resetToken);
-        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(10));
+        // Clear any legacy/old reset tokens to avoid sending UUID tokens
+        if (user.getResetToken() != null) {
+            logger.info("Clearing legacy resetToken for user {}: {}", user.getEmail(), user.getResetToken());
+            user.setResetToken(null);
+            user.setResetTokenExpiry(null);
+        }
+
+        // Generate a 6-digit numeric reset code (easier for users to enter)
+        String resetCode = generateVerificationCode();
+        // Store the code in the resetPasswordToken column and set expiry
+        user.setResetPasswordToken(resetCode);
+        user.setResetTokenExpiryDate(LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
-        logger.info("Password reset token generated for user:{}",user.getEmail());
-        emailService.sendPasswordResetEmail(user.getEmail(),user.getFullName(),resetToken);
+        logger.info("Password reset code generated for user:{}",user.getEmail());
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), resetCode);
     }
 
     //verificationToken
@@ -178,9 +188,6 @@ public class AuthService {
         logger.info("Verification code resent to user: {}", email);
     }
 
-    private String generateResetToken(){
-        return UUID.randomUUID().toString();
-    }
     private String generateVerificationCode() {
         return String.format("%06d", new Random().nextInt(999999));
     }

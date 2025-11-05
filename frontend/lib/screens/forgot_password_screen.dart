@@ -29,14 +29,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       final request = ForgotPasswordRequest(email: _emailController.text);
       ref.read(authProvider.notifier).forgotPassword(request);
 
-      // Navigate to verification code screen
+      // Navigate to Reset Password screen — backend sends a reset token via email
+      // which the user must paste here to set a new password.
+      // After sending the verification code, navigate to the
+      // VerificationCodeScreen where the user will enter the 6-digit code.
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => VerificationCodeScreen(
-                email: _emailController.text,
-              ),
+              builder:
+                  (context) =>
+                      VerificationCodeScreen(email: _emailController.text),
             ),
           );
         }
@@ -89,10 +92,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Email',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+                  Text('Email', style: Theme.of(context).textTheme.bodyLarge),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _emailController,

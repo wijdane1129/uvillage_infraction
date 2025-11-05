@@ -61,15 +61,14 @@ public class SecurityConfig {
                             response.getWriter().write("{\"error\":\"Unauthorized\"}");
                         }))
                 .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(requests -> requests
-                        .requestMatchers(HttpMethod.POST, "/api/auth/sign-up").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/sign-in").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/verify-code").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/auth/verify-email/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/resend-code").permitAll()
-                        .anyRequest().authenticated())
+        .authorizeHttpRequests(requests -> requests
+            // Allow CORS preflight requests
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // During development, permit all auth endpoints under /api/auth/**
+            // to avoid accidental matcher ordering or path issues.
+            // This is safe for local development; tighten for production.
+            .requestMatchers("/api/auth/**").permitAll()
+            .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -79,11 +78,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:8080",
-                "http://localhost:55435"  // Flutter web default port
-        ));
+    // Allow localhost and 127.0.0.1 on any port during development (covers Flutter web dev ports)
+    // Use allowed origin PATTERNS to allow variable dev ports without listing them individually.
+    configuration.setAllowedOriginPatterns(Arrays.asList(
+        "http://localhost:*",
+        "http://127.0.0.1:*"
+    ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setMaxAge(3600L);

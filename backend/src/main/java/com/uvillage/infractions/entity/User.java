@@ -15,11 +15,18 @@ import java.time.LocalDateTime;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    // Map the entity id to the existing database primary key column `rowid`.
+    // The DB already has `rowid` as AUTO_INCREMENT, so mapping avoids Hibernate
+    // attempting to create a second auto column named `id`.
+    @Column(name = "rowid")
     private Long id;
 
     private String email;
+    @Column(name = "full_name")
     private String fullName;
+    
+    @Column(name = "username", nullable = false)
+    private String username;
     private String password;
 
     private String resetToken;
@@ -30,9 +37,11 @@ public class User {
     private LocalDateTime codeExpiryTime;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean emailVerified = false;
     
     @Column(nullable = false)
+    @Builder.Default
     private boolean locked = false;
 
     @Enumerated(EnumType.STRING)
