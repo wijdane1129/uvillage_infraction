@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.security.Principal;
+
+import com.uvillage.infractions.dto.UserProfileDto;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -106,4 +109,37 @@ public class AuthController {
         response.put("message", message);
         return response;
     }
+
+    @PutMapping("/edit-profile/")
+    public ResponseEntity<?> editProfile(@Valid @RequestBody EditProfileRequest request) {
+        try {
+            AuthResponseDto response = authService.editProfile(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("An error occurred during profile update"));
+        }
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Principal principal) {
+        try {
+            if (principal == null || principal.getName() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(createErrorResponse("Unauthorized"));
+            }
+            String email = principal.getName();
+            // AuthService / repository can be used to fetch the user
+            // fetch user directly via service to keep controller thin
+            UserProfileDto profile = authService.getProfileByEmail(email);
+            if (profile == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(createErrorResponse("User not found"));
+            }
+            return ResponseEntity.ok(profile);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("An error occurred"));
+        }
+    }
+
 }

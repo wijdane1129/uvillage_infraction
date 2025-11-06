@@ -8,9 +8,7 @@ class FileUploadService {
   final String baseUrl = 'http://localhost:8080/api/contravention/media';
 
   FileUploadService({required this.dio});
-
-  /// Upload a file for a contravention.
-  /// rowid: contravention id, file: local file, type: one of PHOTO/VIDEO/AUDIO/DOCUMENT
+  
   Future<Map<String, dynamic>> uploadEvidenceFile({
     required int rowid,
     required File file,

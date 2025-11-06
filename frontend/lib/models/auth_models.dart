@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class CreateAccountRequest {
   final String fullName;
   final String email;
@@ -76,3 +78,6 @@ class AuthResponse {
     );
   }
 }
+
+  
+

@@ -55,4 +55,6 @@ public class User {
         AGENT,
         RESPONSABLE
     }
+
+    private String language;
 }

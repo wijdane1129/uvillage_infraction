@@ -188,6 +188,62 @@ public class AuthService {
         logger.info("Verification code resent to user: {}", email);
     }
 
+    // Public-facing profile edit endpoint handler used by controller.
+    public AuthResponseDto editProfile(EditProfileRequest request) {
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            return AuthResponseDto.builder()
+                    .success(false)
+                    .message("User not found")
+                    .build();
+        }
+
+        // If attempting to change email, ensure new email isn't already taken
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                return AuthResponseDto.builder()
+                        .success(false)
+                        .message("Email is already in use")
+                        .build();
+            }
+        }
+
+        try {
+            // Apply changes
+            editProfile(request, user);
+            userRepository.save(user);
+            logger.info("User profile updated: {}", user.getEmail());
+            return AuthResponseDto.builder()
+                    .success(true)
+                    .message("Profile updated successfully")
+                    .build();
+        } catch (IllegalArgumentException ex) {
+            return AuthResponseDto.builder()
+                    .success(false)
+                    .message(ex.getMessage())
+                    .build();
+        } catch (Exception ex) {
+            logger.error("Error updating profile for {}", user.getEmail(), ex);
+            return AuthResponseDto.builder()
+                    .success(false)
+                    .message("An error occurred while updating profile")
+                    .build();
+        }
+    }
+
+    public UserProfileDto getProfileByEmail(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) return null;
+        return UserProfileDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .username(user.getUsername())
+                .language(user.getLanguage())
+                .emailVerified(user.isEmailVerified())
+                .build();
+    }
+
     private String generateVerificationCode() {
         return String.format("%06d", new Random().nextInt(999999));
     }
@@ -212,6 +268,24 @@ public class AuthService {
         }
         if(!specialCharPattern.matcher(password).find()){
             throw new IllegalArgumentException("Password must contain at least one special character");
+        }
+    }
+
+    private void editProfile(EditProfileRequest request, User user){
+        if(request.getFullName()!=null && !request.getFullName().isEmpty()){
+            user.setFullName(request.getFullName());
+        }
+        if(request.getLanguage()!=null && !request.getLanguage().isEmpty()){
+            user.setLanguage(request.getLanguage());
+        }
+        if(request.getEmail()!=null && !request.getEmail().isEmpty()){
+            user.setEmail(request.getEmail());
+        }
+        if(request.getUsername()!=null && !request.getUsername().isEmpty()){
+            user.setUsername(request.getUsername());
+        }
+        if(request.getPassword()!=null && !request.getPassword().isEmpty()){
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
     }
 
