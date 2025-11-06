@@ -25,6 +25,8 @@ dependencies:
   fl_chart: ^0.60.0
   data_tables: ^1.1.1
   image_picker: ^0.8.7+5
+  file_picker: ^8.0.0
+  http: ^1.1.0
   camera: ^0.11.1+1
   fluttertoast: ^8.2.1
   another_flushbar: ^1.11.0

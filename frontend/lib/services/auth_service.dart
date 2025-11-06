@@ -68,4 +68,15 @@ class AuthService {
       return AuthResponse(success: false, message: e.toString());
     }
   }
+
+  Future<AuthResponse> resendVerificationCode(String email) async {
+    try {
+      final response = await _apiService.post('/auth/resend-code', {
+        'email': email,
+      });
+      return AuthResponse.fromJson(response.data);
+    } catch (e) {
+      return AuthResponse(success: false, message: e.toString());
+    }
+  }
 }

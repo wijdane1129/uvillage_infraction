@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/create_account_screen.dart';
 import 'screens/verification_code_screen.dart';
 import 'screens/forgot_password_screen.dart';
-
+import 'screens/contravention_step2.dart';
 
 void main() {
   // Wrap the app with ProviderScope so Riverpod providers work
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Infractions App',
       theme: ThemeData.dark(),
-      home: const ForgotPasswordScreen(), // or other screen you want to preview
+      home: const ContraventionStep2Screen(), // or other screen you want to preview
     );
   }
 }

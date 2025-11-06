@@ -21,7 +21,7 @@ public class ContraventionMedia {
     private String mediaUrl;
 
     @ManyToOne
-    @JoinColumn(name="fk_contravention", nullable=false)
+    @JoinColumn(name="fk_contravention", nullable=true)
     private Contravention contravention;
 
     public enum MediaType {

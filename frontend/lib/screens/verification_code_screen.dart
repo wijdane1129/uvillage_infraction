@@ -279,9 +279,26 @@ class _VerificationCodeScreenState
                   GestureDetector(
                     onTap:
                         _secondsRemaining == 0
-                            ? () {
-                              setState(() => _secondsRemaining = 272);
-                              _startTimer();
+                            ? () async {
+                              // Call backend to resend code and restart timer on success
+                              final response = await ref
+                                  .read(authProvider.notifier)
+                                  .resendVerificationCode(widget.email);
+                              if (response.success) {
+                                setState(() => _secondsRemaining = 272);
+                                _startTimer();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(response.message)),
+                                  );
+                                }
+                              } else {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(response.message)),
+                                  );
+                                }
+                              }
                             }
                             : null,
                     child: Text(
