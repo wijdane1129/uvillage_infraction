@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/password_strength_indicator.dart';
 import '../widgets/password_requirements.dart';
+import 'sign_in_screen.dart';
 
 class CreatePasswordScreen extends ConsumerStatefulWidget {
   final String code;
@@ -28,6 +29,11 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
   }
 
   bool get _passwordsMatch =>
@@ -53,6 +59,21 @@ class _CreatePasswordScreenState extends ConsumerState<CreatePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+
+    // Listen for reset password success and navigate to SignIn when done
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.successMessage != next.successMessage &&
+          next.successMessage != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          // Clear messages then navigate to login screen
+          ref.read(authProvider.notifier).clearMessages();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
+          );
+        });
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppTheme.darkBg,

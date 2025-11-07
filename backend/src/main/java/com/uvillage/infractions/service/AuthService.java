@@ -7,6 +7,10 @@ import com.uvillage.infractions.security.JwtUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,122 +18,135 @@ import java.time.LocalDateTime;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+/**
+ * Consolidated AuthService: handles registration, login, password reset, verification flows.
+ */
 @Service
 public class AuthService {
+
     private final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired 
-    private JwtUtils jwtUtils;
-
-    @Autowired
-    private EmailService emailService;
+    private final UserRepository userRepository;
+    private final JwtUtils jwtUtils;
+    private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    public AuthService(AuthenticationManager authenticationManager,
+                       JwtUtils jwtUtils,
+                       UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       EmailService emailService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtUtils = jwtUtils;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
+    }
 
-    //createAccount
-    public AuthResponseDto register(CreateAcoountRequest request) {
+    // ---- Registration ----
+    public AuthResponseDto register(CreateAccountRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            return AuthResponseDto.builder()
-                .success(false)
-                .message("Email is already in use")
-                .build();
+            return AuthResponseDto.builder().success(false).message("Email is already in use").build();
         }
 
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return AuthResponseDto.builder()
-                .success(false)
-                .message("Passwords do not match")
-                .build();
+            return AuthResponseDto.builder().success(false).message("Passwords do not match").build();
         }
 
         validatePassword(request.getPassword());
 
         User user = User.builder()
-            .email(request.getEmail())
-            .fullName(request.getFullName())
-            // Use email as username by default to satisfy DB NOT NULL/UNIQUE constraint
-            .username(request.getEmail())
-            .password(passwordEncoder.encode(request.getPassword()))
-            .build();
+                .email(request.getEmail())
+                .fullName(request.getFullName())
+                .username(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .build();
 
         User savedUser = userRepository.save(user);
         logger.info("User registered successfully: {}", savedUser.getEmail());
 
-        String jwt = jwtUtils.generateToken(savedUser.getEmail());
-        return AuthResponseDto.builder()
-            .success(true)
-            .token(jwt)
-            .message("Registration successful")
-            .build();
+        // Build a UserDetails to generate token
+        org.springframework.security.core.userdetails.UserDetails ud =
+                org.springframework.security.core.userdetails.User.builder()
+                        .username(savedUser.getEmail())
+                        .password(savedUser.getPassword())
+                        .roles(savedUser.getRole() != null ? savedUser.getRole().name() : "AGENT")
+                        .build();
+
+        String token = jwtUtils.generateToken(ud);
+        return AuthResponseDto.builder().success(true).token(token).message("Registration successful").build();
     }
 
-    //forgotPassword
-    public void forgotPassword(ForgotPasswordRequest request){
-        User user=userRepository.findByEmail(request.getEmail()).orElse(null);
-        if(user==null){
-            logger.warn("Password reset requested for non-existing email:{}",request.getEmail());
+    // ---- Login ----
+    public LoginResponse authenticateUser(LoginRequest request) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+        );
+
+        Object principal = authentication.getPrincipal();
+        org.springframework.security.core.userdetails.UserDetails userDetails;
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            userDetails = (org.springframework.security.core.userdetails.UserDetails) principal;
+        } else {
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found after authentication."));
+            userDetails = org.springframework.security.core.userdetails.User.builder()
+                    .username(user.getEmail() != null ? user.getEmail() : user.getUsername())
+                    .password(user.getPassword())
+                    .roles(user.getRole() != null ? user.getRole().name() : "AGENT")
+                    .build();
+        }
+
+        final String jwt = jwtUtils.generateToken(userDetails);
+        return new LoginResponse(jwt, "Bearer", userDetails.getUsername());
+    }
+
+    // ---- Forgot / Reset Password ----
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            logger.warn("Password reset requested for non-existing email:{}", request.getEmail());
             return;
         }
-        // Clear any legacy/old reset tokens to avoid sending UUID tokens
+
+        // Clear legacy reset tokens
         if (user.getResetToken() != null) {
             logger.info("Clearing legacy resetToken for user {}: {}", user.getEmail(), user.getResetToken());
             user.setResetToken(null);
             user.setResetTokenExpiry(null);
         }
 
-        // Generate a 6-digit numeric reset code (easier for users to enter)
         String resetCode = generateVerificationCode();
-        // Store the code in the resetPasswordToken column and set expiry
         user.setResetPasswordToken(resetCode);
         user.setResetTokenExpiryDate(LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
-        logger.info("Password reset code generated for user:{}",user.getEmail());
+        logger.info("Password reset code generated for user:{}", user.getEmail());
         emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), resetCode);
     }
 
-    //verificationToken
     public AuthResponseDto verifyResetToken(VerificationCodeRequest request) {
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
-        if (user == null || user.getResetPasswordToken() == null || 
-            !user.getResetPasswordToken().equals(request.getCode())) {
-            return AuthResponseDto.builder()
-                .success(false)
-                .message("Invalid reset token")
-                .build();
+        if (user == null || user.getResetPasswordToken() == null || !user.getResetPasswordToken().equals(request.getCode())) {
+            return AuthResponseDto.builder().success(false).message("Invalid reset token").build();
         }
 
         if (user.getResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
-            return AuthResponseDto.builder()
-                .success(false)
-                .message("Reset token has expired")
-                .build();
+            return AuthResponseDto.builder().success(false).message("Reset token has expired").build();
         }
 
-        return AuthResponseDto.builder()
-            .success(true)
-            .message("Token verified successfully")
-            .build();
+        return AuthResponseDto.builder().success(true).message("Token verified successfully").build();
     }
 
-    //resetPassword
     public AuthResponseDto resetPassword(ResetPasswordRequest request) {
         User user = userRepository.findByResetPasswordToken(request.getToken()).orElse(null);
         if (user == null) {
-            return AuthResponseDto.builder()
-                .success(false)
-                .message("Invalid reset token")
-                .build();
+            return AuthResponseDto.builder().success(false).message("Invalid reset token").build();
         }
 
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return AuthResponseDto.builder()
-                .success(false)
-                .message("Passwords do not match")
-                .build();
+            return AuthResponseDto.builder().success(false).message("Passwords do not match").build();
         }
 
         validatePassword(request.getPassword());
@@ -139,17 +156,21 @@ public class AuthService {
         userRepository.save(user);
 
         logger.info("Password reset successfully for user: {}", user.getEmail());
-        String jwt = jwtUtils.generateToken(user.getEmail());
-        return AuthResponseDto.builder()
-            .success(true)
-            .token(jwt)
-            .message("Password reset successful")
-            .build();
+
+        org.springframework.security.core.userdetails.UserDetails ud =
+                org.springframework.security.core.userdetails.User.builder()
+                        .username(user.getEmail())
+                        .password(user.getPassword())
+                        .roles(user.getRole() != null ? user.getRole().name() : "AGENT")
+                        .build();
+
+        String jwt = jwtUtils.generateToken(ud);
+        return AuthResponseDto.builder().success(true).token(jwt).message("Password reset successful").build();
     }
 
+    // ---- Email verification ----
     public AuthResponseDto verifyCode(VerificationCodeRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (!user.getVerificationCode().equals(request.getCode())) {
             throw new IllegalArgumentException("Invalid verification code");
@@ -165,15 +186,11 @@ public class AuthService {
         userRepository.save(user);
 
         logger.info("Email verified successfully for user: {}", user.getEmail());
-        return AuthResponseDto.builder()
-                .success(true)
-                .message("Email verified successfully")
-                .build();
+        return AuthResponseDto.builder().success(true).message("Email verified successfully").build();
     }
 
     public void resendVerificationCode(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (user.isEmailVerified()) {
             throw new IllegalArgumentException("Email is already verified");
@@ -192,30 +209,25 @@ public class AuthService {
         return String.format("%06d", new Random().nextInt(999999));
     }
 
-    // method to validate password strength
-    private void validatePassword(String password){
-        if(password.length()<8){
+    private void validatePassword(String password) {
+        if (password.length() < 8) {
             throw new IllegalArgumentException("Password must be at least 8 characters long");
         }
-        Pattern upperCasePattern=Pattern.compile("[A-Z]");
-        Pattern lowerCasePattern=Pattern.compile("[a-z]");
-        Pattern digitPattern=Pattern.compile("[0-9]");
-        Pattern specialCharPattern=Pattern.compile("[^a-zA-Z0-9]");
-        if(!upperCasePattern.matcher(password).find()){
+        Pattern upperCasePattern = Pattern.compile("[A-Z]");
+        Pattern lowerCasePattern = Pattern.compile("[a-z]");
+        Pattern digitPattern = Pattern.compile("[0-9]");
+        Pattern specialCharPattern = Pattern.compile("[^a-zA-Z0-9]");
+        if (!upperCasePattern.matcher(password).find()) {
             throw new IllegalArgumentException("Password must contain at least one uppercase letter");
         }
-        if(!lowerCasePattern.matcher(password).find()){
+        if (!lowerCasePattern.matcher(password).find()) {
             throw new IllegalArgumentException("Password must contain at least one lowercase letter");
         }
-        if(!digitPattern.matcher(password).find()){
+        if (!digitPattern.matcher(password).find()) {
             throw new IllegalArgumentException("Password must contain at least one digit");
         }
-        if(!specialCharPattern.matcher(password).find()){
+        if (!specialCharPattern.matcher(password).find()) {
             throw new IllegalArgumentException("Password must contain at least one special character");
         }
     }
-
-
-
-
 }

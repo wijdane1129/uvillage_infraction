@@ -12,6 +12,9 @@ class AppTheme {
   static const Color borderColor = Color(0xFF2D3748);
   static const Color errorRed = Color(0xFFEF5350);
   static const Color successGreen = Color(0xFF66BB6A);
+  
+  // Background primary color for loading visibility
+  static const Color backgroundPrimary = darkBg;
 
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,

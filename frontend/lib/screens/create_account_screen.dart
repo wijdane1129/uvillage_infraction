@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_theme.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
+import 'sign_in_screen.dart';
 import '../widgets/gradient_button.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   void _handleSignUp() {
     if (_formKey.currentState!.validate()) {
       final request = CreateAccountRequest(
@@ -44,8 +50,30 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
+    // Listen for auth state changes and navigate to SignIn on successful sign-up
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.successMessage != next.successMessage &&
+          next.successMessage != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ref.read(authProvider.notifier).clearMessages();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
+          );
+        });
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppTheme.darkBg,
+      appBar: AppBar(
+        backgroundColor: AppTheme.darkBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
