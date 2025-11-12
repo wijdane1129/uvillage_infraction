@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
+// 💡 NOUVEAUX IMPORTS NÉCESSAIRES POUR RIVERPOD ET LA NAVIGATION
+import 'package:flutter_riverpod/flutter_riverpod.dart'; 
+import '../providers/agent_auth_provider.dart'; 
+import 'agent_home_screen.dart'; // Assurez-vous que le nom de fichier est correct
+
 import 'package:another_flushbar/flushbar.dart'; // Pour les notifications
 import '../config/app_theme.dart'; // Import du thème
 import '../services/auth_service.dart'; // Import du service
+import '../services/api_client.dart';   // Pour injecter le header Authorization immédiatement
 
-// NOTE: Vous devez créer ce fichier (lib/screens/dashboard_screen.dart)
-// import 'dashboard_screen.dart'; 
+// NOTE: L'import 'dashboard_screen.dart' est remplacé par 'agent_home_screen.dart'
 
-class SignInScreen extends StatefulWidget {
+// 💡 CHANGEMENT : Étend ConsumerStatefulWidget pour utiliser Riverpod
+class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
   @override
-  State<SignInScreen> createState() => _SignInScreenState();
+  // 💡 CHANGEMENT : Crée ConsumerState
+  ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+// 💡 CHANGEMENT : Étend ConsumerState<SignInScreen>
+class _SignInScreenState extends ConsumerState<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
   bool _isPasswordVisible = false;
-  
-  // NOUVEL ÉTAT : Pour afficher le CircularProgressIndicator sur le bouton
   bool _isLoading = false; 
 
   // Instance du service d'authentification
@@ -32,7 +38,7 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  // --- LOGIQUE D'AUTHENTIFICATION ---
+  // --- LOGIQUE D'AUTHENTIFICATION MISE À JOUR ---
   void _handleLogin() async {
     // 1. Vérification simple des champs
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -50,26 +56,34 @@ class _SignInScreenState extends State<SignInScreen> {
         _passwordController.text,
       );
 
-      // Si le code atteint ici, la connexion est réussie et le token est stocké
-      _showFlushbar(context, "Connexion réussie ! Bienvenue.", isError: false);
+      // 4. Injecter immédiatement le header Authorization pour les appels qui suivent
+      try {
+        ApiClient.dio.options.headers['Authorization'] = 'Bearer ${response.token}';
+      } catch (_) {
+        // L'intercepteur lira le token depuis Hive sinon
+      }
+
+      // 5. Mise à jour de l'état global avec les données réelles de la réponse
+      ref.read(currentAgentIdProvider.notifier).setAgentId(response.agentRowid ?? 0);
+      ref.read(agentNameProvider.notifier).setAgentName(response.nomComplet ?? 'Agent Inconnu');
       
-      // 4. Redirection vers l'écran principal (Dashboard)
-      // REMPLACER cette navigation une fois que vous avez créé DashboardScreen
-      /*
+      // Affiche un message de bienvenue avec le vrai nom
+      _showFlushbar(context, "Connexion réussie ! Bienvenue, ${response.nomComplet ?? 'Agent'}", isError: false);
+
+      // 6. Redirection vers l'écran principal (AgentHomeScreen)
       if (!mounted) return;
+      // 💡 pushReplacement pour empêcher le retour à l'écran de connexion
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        MaterialPageRoute(builder: (context) => const AgentHomeScreen()),
       );
-      */
       
     } catch (e) {
-      // 5. Affichage de l'erreur
-      // Retire le préfixe "Exception: " pour un message plus propre
+      // 6. Affichage de l'erreur
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       _showFlushbar(context, errorMessage, isError: true);
 
     } finally {
-      // 6. Désactive l'état de chargement, que ce soit un succès ou un échec
+  // 7. Désactive l'état de chargement
       setState(() { _isLoading = false; });
     }
   }
@@ -108,11 +122,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   width: 80,
                   height: 80,
                   alignment: Alignment.center,
-                  // NOTE: AppTheme.glowingCircle est supposé exister dans config/app_theme.dart
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
-                       BoxShadow(
+                        BoxShadow(
                         color: AppTheme.purpleAccent.withOpacity(0.35),
                         blurRadius: 20,
                         spreadRadius: 5,
@@ -214,12 +227,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   // Désactive le bouton si _isLoading est vrai
                   onPressed: _isLoading ? null : _handleLogin, 
                   child: _isLoading
-                      // RETRAIT DU MOT-CLÉ CONST ICI (dans le CircularProgressIndicator)
                       ? SizedBox( 
                           width: 24, 
                           height: 24,
                           child: CircularProgressIndicator(
-                            // Si AppTheme.backgroundPrimary n'existe pas, il faut le vérifier dans app_theme.dart
                             color: AppTheme.backgroundPrimary, 
                             strokeWidth: 2,
                           ),

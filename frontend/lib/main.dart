@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Import nécessaire pour l'initialisation
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/app_theme.dart'; 
-import 'screens/startup_screen.dart'; // Le premier écran chargé
+import 'screens/startup_screen.dart';
+import 'services/api_client.dart'; // ✅ AJOUT CRITIQUE
+
+// Clé de navigation globale pour permettre la navigation depuis n'importe où
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   // 1. Assure que Flutter est prêt pour les appels asynchrones
@@ -9,10 +14,19 @@ void main() async {
   
   // 2. Initialisation de Hive et ouverture de la boîte d'authentification
   await Hive.initFlutter();
-  await Hive.openBox('authBox'); // 'authBox' est utilisé par AuthService pour stocker le JWT
+  await Hive.openBox('authBox'); 
   
-  // 3. Lance l'application une fois que tout est initialisé
-  runApp(const MyApp());
+  // 3. ✅ CRITIQUE: Initialiser l'intercepteur JWT pour l'API
+  await ApiClient.init();
+  
+  print('✅ [MAIN] Application initialisée avec succès');
+  print('   - Hive: OK');
+  print('   - API Client avec JWT: OK');
+  
+  // 4. Lance l'application, enveloppée par ProviderScope (NÉCESSAIRE pour Riverpod)
+  runApp(const ProviderScope(
+    child: MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -21,12 +35,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey, // Ajout de la clé de navigation globale
       title: 'CampusGuard',
       // Votre thème sombre
       theme: AppTheme.darkTheme, 
       debugShowCheckedModeBanner: false,
       
-      // Le 'home' est désormais l'écran qui vérifie l'état de connexion.
+      // L'écran de démarrage qui vérifie l'état de connexion.
+      // Cet écran déterminera si on va vers Login ou Dashboard.
       home: const StartupScreen(), 
     );
   }

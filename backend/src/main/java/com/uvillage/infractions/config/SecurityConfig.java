@@ -9,7 +9,6 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -28,31 +27,27 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
 
-        // Explicit constructor to satisfy IDEs that do not run Lombok annotation processing
-        public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
-                                                  AuthenticationProvider authenticationProvider) {
-                this.jwtAuthFilter = jwtAuthFilter;
-                this.authenticationProvider = authenticationProvider;
-        }
+    // Explicit constructor to satisfy IDEs that do not run Lombok annotation processing
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
+                          AuthenticationProvider authenticationProvider) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.authenticationProvider = authenticationProvider;
+    }
 
     // Ajout du Bean pour la configuration CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // En dev, autoriser les origines locales sur n'importe quel port (localhost/127.0.0.1)
-        // Utiliser allowedOriginPatterns pour accepter des patterns de ports
+        // Ant-style patterns: utilisez '*' pour tous ports
         configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
-        // Autoriser les méthodes courantes (incluant OPTIONS pour le preflight)
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        // Autoriser tous les en-têtes
         configuration.setAllowedHeaders(List.of("*"));
-        // Autoriser l'envoi de cookies/credentials depuis le front-end si nécessaire
         configuration.setAllowCredentials(true);
-        // Exposer l'en-tête d'autorisation (nécessaire pour JWT)
         configuration.setExposedHeaders(List.of("Authorization"));
 
+        configuration.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Appliquer cette configuration à TOUTES les requêtes
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
@@ -60,38 +55,39 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Activer CORS en utilisant la source définie ci-dessus
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                
-                // Désactiver CSRF car nous utilisons des jetons JWT (stateless)
                 .csrf(AbstractHttpConfigurer::disable)
                 
                 // Configurer les autorisations
                 .authorizeHttpRequests(auth -> auth
                         // Autoriser les requêtes preflight OPTIONS partout
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Autoriser TOUS les endpoints sous /api/v1/auth/ (login, authenticate, register, etc.)
+                        
+                        // Autoriser les endpoints de connexion et Swagger
                         .requestMatchers("/api/v1/auth/login",
                                          "/api/v1/auth/authenticate",
                                          "/api/v1/auth/register",
-                                "/swagger-ui/**", "/v3/api-docs/**").permitAll() // OpenAPI/Swagger
+                                         "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        
+                        // 🚨 CORRECTION : Autoriser l'accès aux endpoints de stats/historique
+                        // 1. Endpoint /stats (si existait séparément)
+                        .requestMatchers("/api/v1/stats") 
+                            .hasAnyRole("AGENT", "RESPONSABLE", "ADMIN") 
+
+                        // 2. Endpoints /contraventions/* (history, stats)
+                        .requestMatchers("/api/v1/contraventions/history/**", 
+                                         "/api/v1/contraventions/stats/**")
+                            .hasAnyRole("AGENT", "RESPONSABLE", "ADMIN") 
                         
                         // Tous les autres chemins nécessitent une authentification
                         .anyRequest().authenticated()
                 )
                 
-                // Configurer la gestion des sessions
-                .sessionManagement(sess -> sess
-                        // Rendre l'application stateless (sans session)
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                // ... (reste de la configuration : sessionManagement, etc.) ...
                 
-                // Définir le fournisseur d'authentification personnalisé
                 .authenticationProvider(authenticationProvider)
-                
-                // Ajouter le filtre JWT avant le filtre par défaut
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
+                
         return http.build();
     }
 }

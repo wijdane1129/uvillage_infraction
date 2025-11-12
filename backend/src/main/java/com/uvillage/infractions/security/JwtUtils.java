@@ -1,65 +1,40 @@
 package com.uvillage.infractions.security;
 
-import java.nio.charset.StandardCharsets;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-
-/**
- * Utilitaires pour la manipulation des JSON Web Tokens (JWT).
- */
-@Component
+@Service
 public class JwtUtils {
+    
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-    // Clé secrète stockée dans application.properties
-    @Value("${jwt.secret:defaultSecretKeyForDevelopmentOnlyPleaseChangeMeInProd}")
-    private String jwtSecret;
+    // 🚨 CORRECTION : Utilise les noms de propriétés trouvés (jwt.secret)
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    @Value("${jwt.expiration.ms:86400000}") // 24 hours
-    private long jwtExpirationMs;
+    // 🚨 CORRECTION : Utilise les noms de propriétés trouvés (jwt.expiration.ms)
+    @Value("${jwt.expiration.ms}")
+    private long jwtExpiration;
 
-    // --- Génération de Token ---
-
-    /**
-     * Génère un JWT pour l'utilisateur.
-     */
-    public String generateToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        // Ajoutez l'email (username) au claims pour être sûr
-        claims.put("email", userDetails.getUsername());
-        return createToken(claims, userDetails.getUsername());
-    }
-
-    private String createToken(Map<String, Object> claims, String subject) {
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject) // Le sujet est généralement l'email/ID de l'utilisateur
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
-
-    // --- Validation et Extraction ---
+    // --- 1. Extraction des Claims (Informations dans le Token) ---
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
-    }
-
-    public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -68,36 +43,76 @@ public class JwtUtils {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        // Ajout d'un try-catch pour le débogage :
+        try {
+            return Jwts
+                    .parserBuilder()
+                    .setSigningKey(getSignInKey()) // Utilise la clé signée
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            logger.error("Token signature is invalid or expired: {}", e.getMessage());
+            throw new io.jsonwebtoken.security.SignatureException("Invalid JWT signature: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error extracting claims from token: {}", e.getMessage());
+            throw e;
+        }
     }
 
-    // Dans com.uvillage.infractions.security.JwtUtils
-// ...
-private Key getSigningKey() {
-    // Utiliser le décodeur BASE64URL pour décoder la clé.
-    // BASE64URL gère les caractères '-' et '_' (URL-safe).
-    // Ceci est la méthode recommandée par jjwt pour décoder les clés Base64.
-    try {
-        byte[] keyBytes = Decoders.BASE64URL.decode(jwtSecret);
-        return Keys.hmacShaKeyFor(keyBytes);
-    } catch (Exception e) {
-        // Si la clé n'est pas une chaîne Base64 URL-safe valide (ex: c'est une chaîne brute),
-        // nous utilisons la chaîne brute encodée en UTF-8.
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    // --- 2. Génération du Token ---
+    
+    public String generateToken(UserDetails userDetails) {
+        return generateToken(new HashMap<>(), userDetails);
     }
-}
-// ...
+
+    public String generateToken(
+            Map<String, Object> extraClaims,
+            UserDetails userDetails
+    ) {
+        return buildToken(extraClaims, userDetails, jwtExpiration);
+    }
+
+    private String buildToken(
+            Map<String, Object> extraClaims,
+            UserDetails userDetails,
+            long expiration
+    ) {
+        return Jwts
+                .builder()
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // --- 3. Validation du Token ---
+
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+    }
 
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    // --- 4. Méthode pour obtenir la clé (Génère la clé à partir d'une simple String) ---
+
+    private Key getSignInKey() {
+        logger.debug("Using JWT Secret Key: {}", secretKey); 
+        byte[] keyBytes = secretKey.getBytes(); 
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 }
