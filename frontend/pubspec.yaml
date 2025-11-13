@@ -44,3 +44,4 @@ flutter:
     # - assets/images/
     # - assets/fonts/
     - assets/images/illustration.png
+    - assets/data/compus_euromed_chambres.csv

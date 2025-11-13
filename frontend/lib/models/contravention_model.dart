@@ -6,15 +6,25 @@ enum ContraventionStatus {
   CLASSEE_SANS_SUITE,
 }
 
-// Fonction utilitaire pour la présentation visuelle (comme avant)
-(Color, IconData, String) getStatusPresentation(ContraventionStatus status, {required Color purpleAccent, required Color successGreen, required Color textSecondary}) {
-  // ... (Logique identique à la réponse précédente)
-  // Utilisation de la logique pour mapper les couleurs et icônes
-  // ...
+// Small helper class to hold presentation values for a contravention status.
+class StatusPresentation {
+  final Color color;
+  final IconData icon;
+  final String statusText;
+
+  StatusPresentation({
+    required this.color,
+    required this.icon,
+    required this.statusText,
+  });
+}
+
+// Fonction utilitaire pour la présentation visuelle (compatibilité Dart <3)
+StatusPresentation getStatusPresentation(ContraventionStatus status, {required Color purpleAccent, required Color successGreen, required Color textSecondary}) {
   String statusText;
   Color color;
   IconData icon;
-  
+
   switch (status) {
     case ContraventionStatus.SOUS_VERIFICATION:
       statusText = 'Sous vérification';
@@ -32,7 +42,7 @@ enum ContraventionStatus {
       icon = Icons.archive;
       break;
   }
-  return (color, icon, statusText);
+  return StatusPresentation(color: color, icon: icon, statusText: statusText);
 }
 
 class ContraventionModel {

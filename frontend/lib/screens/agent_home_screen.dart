@@ -5,6 +5,12 @@ import '../models/contravention_model.dart';
 import '../providers/contravention_provider.dart'; // NÉCESSAIRE
 import '../providers/agent_auth_provider.dart';
 import '../providers/history_provider.dart';
+import '../models/resident_model.dart';
+import '../services/resident_mock_service.dart';
+import '../widgets/gradient_button.dart';
+// Note: we avoid importing the original `agent_infraction_screen.dart` here
+// to prevent the earlier compiler/resolution issue. A local copy of the
+// screen and small helper widgets are provided below.
 
 
 // L'écran doit être un ConsumerWidget pour utiliser Riverpod
@@ -246,10 +252,10 @@ class InfractionListItem extends StatelessWidget {
     final successGreen = AppTheme.successGreen;
     final textSecondary = AppTheme.textSecondary;
 
-    final (color, icon, statusText) = getStatusPresentation(
-      infraction.statut, 
-      purpleAccent: purpleAccent, 
-      successGreen: successGreen, 
+    final pres = getStatusPresentation(
+      infraction.statut,
+      purpleAccent: purpleAccent,
+      successGreen: successGreen,
       textSecondary: textSecondary,
     );
 
@@ -260,20 +266,20 @@ class InfractionListItem extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
+          leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: pres.color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: color, size: 24),
+          child: Icon(pres.icon, color: pres.color, size: 24),
         ),
         title: Text(
           infraction.titre,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          '$statusText | ${infraction.dateHeure} | ${infraction.residentNom}',
+          '${pres.statusText} | ${infraction.dateHeure} | ${infraction.residentNom}',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         trailing: const Icon(
@@ -303,8 +309,13 @@ Widget _buildNewInfractionButton(BuildContext context) {
       ],
     ),
     child: FloatingActionButton.extended(
-      onPressed: () {
+        onPressed: () {
         // Logique pour la création
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => AgentInfractionScreenLocal(),
+          ),
+        );
       },
       label: const Text('Nouvelle Infraction'),
       icon: const Icon(Icons.add),
@@ -373,3 +384,238 @@ class AgentBottomNavBar extends StatelessWidget {
 
 // debugPrintToken removed — token is handled securely by the ApiClient and
 // authentication flow. Remove this helper when no longer needed.
+
+// --- Minimal helper widgets used by the local infraction screen ---
+class ResidentCard extends StatelessWidget {
+  final String fullName;
+  final String roomInfo;
+  const ResidentCard({super.key, required this.fullName, required this.roomInfo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBgAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(radius: 26, backgroundColor: AppTheme.purpleAccent, child: const Icon(Icons.person, color: Colors.white)),
+          const SizedBox(width: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(fullName, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            const SizedBox(height: 4),
+            Text(roomInfo, style: Theme.of(context).textTheme.bodyMedium),
+          ])
+        ],
+      ),
+    );
+  }
+}
+
+class CustomDropdownField extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+  final String hint;
+
+  const CustomDropdownField({super.key, required this.label, required this.icon, this.value, required this.items, required this.onChanged, required this.hint});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(color: AppTheme.darkBgAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        decoration: InputDecoration(border: InputBorder.none, labelText: label, icon: Icon(icon, color: AppTheme.textSecondary)),
+        dropdownColor: AppTheme.darkBgAlt,
+        items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class RoomInputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String hint;
+  const RoomInputField({super.key, required this.controller, required this.label, required this.icon, required this.hint});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(color: AppTheme.darkBgAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.borderColor)),
+      child: TextField(controller: controller, keyboardType: TextInputType.text, style: const TextStyle(color: AppTheme.textPrimary), decoration: InputDecoration(border: InputBorder.none, labelText: label, icon: Icon(icon, color: AppTheme.textSecondary), hintText: hint)),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Local copy of the Infraction screen (temporary, avoids cross-file issues)
+// -----------------------------------------------------------------------------
+class AgentInfractionScreenLocal extends ConsumerStatefulWidget {
+  const AgentInfractionScreenLocal({super.key});
+
+  @override
+  ConsumerState<AgentInfractionScreenLocal> createState() => _AgentInfractionScreenLocalState();
+}
+
+class _AgentInfractionScreenLocalState extends ConsumerState<AgentInfractionScreenLocal> {
+  final TextEditingController roomController = TextEditingController();
+  ResidentModel? foundResident;
+  bool isSearching = false;
+  String? selectedBuilding;
+
+  @override
+  void dispose() {
+    roomController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const List<String> motifs = ['Bruit excessif', 'Dégradation', 'Fumer', 'Autre'];
+    const List<String> buildings = ['Immeuble A', 'Immeuble B', 'Immeuble C', 'Immeuble D'];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Infraction Form'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(4.0),
+          child: LinearProgressIndicator(
+            value: 1 / 3,
+            backgroundColor: AppTheme.darkBgAlt,
+            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.purpleAccent),
+          ),
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: Text('Étape 1/3', style: TextStyle(color: AppTheme.textSecondary)),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.darkBgAlt,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: CustomDropdownField(
+                label: 'Motif de l\'infraction',
+                icon: Icons.warning_amber,
+                hint: 'Sélectionner un motif',
+                items: motifs,
+                onChanged: (newValue) {
+                  debugPrint('Motif sélectionné: $newValue');
+                },
+              ),
+            ),
+
+            const SizedBox(height: 32.0),
+
+            Text(
+              'Identifier le résident',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16.0),
+
+            RoomInputField(
+              controller: roomController,
+              label: 'Numéro de chambre',
+              icon: Icons.numbers,
+              hint: '# Numéro de chambre',
+            ),
+            const SizedBox(height: 16.0),
+
+            CustomDropdownField(
+              label: 'Sélectionner un immeuble',
+              icon: Icons.apartment,
+              hint: 'Sélectionner un immeuble',
+              items: buildings,
+              onChanged: (newValue) {
+                setState(() {
+                  selectedBuilding = newValue;
+                });
+                debugPrint('Immeuble sélectionné: $newValue');
+              },
+            ),
+
+            const SizedBox(height: 16.0),
+
+            GradientButton(
+              onPressed: () async {
+                final query = roomController.text.trim();
+                if (query.isEmpty) return;
+                setState(() {
+                  isSearching = true;
+                  foundResident = null;
+                });
+
+                ResidentModel? r;
+                if (selectedBuilding != null && selectedBuilding!.trim().isNotEmpty) {
+                  r = await ResidentMockService.findByRoom(query, building: selectedBuilding);
+                } else {
+                  final all = await ResidentMockService.findAllByRoom(query);
+                  if (all.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucun résident trouvé pour ce numéro')));
+                  } else if (all.length > 1) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Plusieurs résidents trouvés: précisez l\'immeuble')));
+                    r = null;
+                  } else {
+                    r = all.first;
+                  }
+                }
+
+                setState(() {
+                  foundResident = r;
+                  isSearching = false;
+                });
+              },
+              text: isSearching ? 'Recherche...' : 'Rechercher',
+              height: 55,
+              radius: 12,
+            ),
+
+            const SizedBox(height: 20.0),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Résident inconnu / Non identifié', style: TextStyle(color: AppTheme.textSecondary)),
+                Switch(value: false, onChanged: (bool value) { debugPrint('Résident inconnu: $value'); }, activeColor: AppTheme.purpleAccent, inactiveThumbColor: AppTheme.borderColor),
+              ],
+            ),
+            const SizedBox(height: 12.0),
+
+            if (foundResident != null)
+              ResidentCard(fullName: foundResident!.fullName, roomInfo: '${foundResident!.batiment} - Chambre ${foundResident!.numeroChambre}'),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: GradientButton(
+          onPressed: () { debugPrint('Passer à l\'étape 2'); },
+          text: 'Suivant',
+          height: 60,
+        ),
+      ),
+    );
+  }
+}
