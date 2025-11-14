@@ -9,9 +9,18 @@ class AppTheme {
   static const Color cyanAccent = Color(0xFF26C6DA);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF9CA3AF);
+
+  // Convenience aliases used across the app
+  static const Color white = textPrimary;
+  static const Color primaryColor = purpleAccent;
+  static const Color orangeAccent = Color(0xFFFFA726);
+
   static const Color borderColor = Color(0xFF2D3748);
   static const Color errorRed = Color(0xFFEF5350);
   static const Color successGreen = Color(0xFF66BB6A);
+
+  // Ajout de backgroundPrimary (nécessaire dans dashboard_agent)
+  static const Color backgroundPrimary = darkBg;
 
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,

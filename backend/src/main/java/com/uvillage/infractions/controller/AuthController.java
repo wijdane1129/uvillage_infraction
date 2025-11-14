@@ -1,26 +1,49 @@
 package com.uvillage.infractions.controller;
 
 import com.uvillage.infractions.dto.*;
+import com.uvillage.infractions.entity.User;
+import com.uvillage.infractions.repository.UserRepository;
 import com.uvillage.infractions.service.AuthService;
+import com.uvillage.infractions.security.JwtUtils;
+
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
-import java.security.Principal;
-
-import com.uvillage.infractions.dto.UserProfileDto;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
+    private final AuthService authService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtils jwtUtils;
+    private final UserRepository userRepository;
+
+    public AuthController(AuthService authService,
+                          AuthenticationManager authenticationManager,
+                          JwtUtils jwtUtils,
+                          UserRepository userRepository) {
+        this.authService = authService;
+        this.authenticationManager = authenticationManager;
+        this.jwtUtils = jwtUtils;
+        this.userRepository = userRepository;
+    }
+
+    // --- Registration ---
     @PostMapping("/sign-up")
     public ResponseEntity<?> signUp(@Valid @RequestBody CreateAcoountRequest request) {
         try {
@@ -34,17 +57,68 @@ public class AuthController {
         }
     }
 
+    // --- Login ---
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        logger.info("[AUTH] Tentative de connexion pour: {}", request.getEmail());
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtils.generateToken(userDetails);
+
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            String nomComplet = (user.getFullName() != null && !user.getFullName().isEmpty())
+                    ? user.getFullName()
+                    : user.getUsername();
+
+            LoginResponse response = LoginResponse.builder()
+                    .token(token)
+                    .email(user.getEmail())
+                    .agentRowid(user.getId())
+                    .nomComplet(nomComplet)
+                    .role(user.getRole().name())
+                    .build();
+
+            logger.info("[AUTH] ✅ Connexion réussie pour: {} (ID: {}, Role: {})",
+                    user.getEmail(), user.getId(), user.getRole());
+
+            return ResponseEntity.ok(response);
+
+        } catch (AuthenticationException e) {
+            logger.error("[AUTH] ❌ Échec de connexion pour: {} - Identifiants incorrects",
+                    request.getEmail());
+            return ResponseEntity.status(401).body("Identifiants incorrects");
+
+        } catch (Exception e) {
+            logger.error("[AUTH] ❌ Erreur interne pour: {}", request.getEmail(), e);
+            return ResponseEntity.status(500)
+                    .body("Une erreur interne s'est produite. Veuillez réessayer plus tard.");
+        }
+    }
+
+    // --- Forgot Password ---
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
             authService.forgotPassword(request);
-            return ResponseEntity.ok(createSuccessResponse("If your email exists, you will receive reset instructions"));
+            return ResponseEntity.ok(createSuccessResponse(
+                    "If your email exists, you will receive reset instructions"));
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred"));
         }
     }
 
+    // --- Verify Email / Reset Codes ---
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@Valid @RequestBody VerificationCodeRequest request) {
         try {
@@ -96,21 +170,8 @@ public class AuthController {
         }
     }
 
-    private Map<String, Object> createErrorResponse(String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", message);
-        return response;
-    }
-
-    private Map<String, Object> createSuccessResponse(String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", message);
-        return response;
-    }
-
-    @PutMapping("/edit-profile/")
+    // --- Profile Management ---
+    @PutMapping("/edit-profile")
     public ResponseEntity<?> editProfile(@Valid @RequestBody EditProfileRequest request) {
         try {
             AuthResponseDto response = authService.editProfile(request);
@@ -127,19 +188,34 @@ public class AuthController {
     public ResponseEntity<?> getProfile(Principal principal) {
         try {
             if (principal == null || principal.getName() == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(createErrorResponse("Unauthorized"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse("Unauthorized"));
             }
             String email = principal.getName();
-            // AuthService / repository can be used to fetch the user
-            // fetch user directly via service to keep controller thin
             UserProfileDto profile = authService.getProfileByEmail(email);
             if (profile == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(createErrorResponse("User not found"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createErrorResponse("User not found"));
             }
             return ResponseEntity.ok(profile);
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("An error occurred"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("An error occurred"));
         }
     }
 
+    // --- Helper Methods ---
+    private Map<String, Object> createErrorResponse(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", message);
+        return response;
+    }
+
+    private Map<String, Object> createSuccessResponse(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        return response;
+    }
 }

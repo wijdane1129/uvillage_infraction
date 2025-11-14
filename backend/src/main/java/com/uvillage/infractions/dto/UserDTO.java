@@ -13,7 +13,7 @@ public class UserDTO {
     // Méthode de conversion statique
     public static UserDTO fromEntity(User user) {
         UserDTO dto = new UserDTO();
-        dto.setRowid(user.getId());
+        dto.setRowid(user.getRowid());
         dto.setUsername(user.getUsername());
         return dto;
     }

@@ -1,17 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:provider/provider.dart' as p;
-import 'providers/dashboard_provider.dart';
-import 'screens/create_account_screen.dart';
-import 'screens/verification_code_screen.dart';
-import 'screens/forgot_password_screen.dart';
-import 'screens/create_password_screen.dart';
-import 'screens/contravention_step2.dart';
-import 'screens/User_profile.dart';
-import 'screens/dashboard_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'config/app_theme.dart';
+import 'screens/startup_screen.dart';
+import 'services/api_client.dart'; // API client with JWT
 
-void main() {
-  // Wrap the app with ProviderScope so Riverpod providers work
+// Clé de navigation globale pour permettre la navigation depuis n'importe où
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+void main() async {
+  // Assure que Flutter est prêt pour les appels asynchrones
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisation de Hive et ouverture de la boîte d'authentification
+  await Hive.initFlutter();
+  await Hive.openBox('authBox');
+
+  // Initialiser l'intercepteur JWT pour l'API
+  await ApiClient.init();
+
+  print('✅ [MAIN] Application initialisée avec succès');
+  print('   - Hive: OK');
+  print('   - API Client avec JWT: OK');
+
+  // Lance l'application, enveloppée par ProviderScope (nécessaire pour Riverpod)
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -21,13 +33,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Infractions App',
-      theme: ThemeData.dark(),
-      // Provide DashboardProvider to the widget tree so DashboardScreen can access it
-      home: p.ChangeNotifierProvider(
-        create: (_) => DashboardProvider(),
-        child: const DashboardScreen(), // or replace with your initial route
-      ),
+      navigatorKey: navigatorKey, // Clé globale pour navigation
+      title: 'CampusGuard',
+      theme: AppTheme.darkTheme,
+      debugShowCheckedModeBanner: false,
+
+      // Écran de démarrage qui vérifie l'état de connexion
+      home: const StartupScreen(),
     );
   }
 }
