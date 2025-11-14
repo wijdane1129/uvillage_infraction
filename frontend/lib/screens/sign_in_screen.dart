@@ -76,6 +76,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ref
           .read(agentNameProvider.notifier)
           .setAgentName(response.nomComplet ?? 'Agent Inconnu');
+      // store agent email in provider as well
+      ref.read(agentEmailProvider.notifier).setAgentEmail(response.email);
 
       // Affiche un message de bienvenue avec le vrai nom
       _showFlushbar(

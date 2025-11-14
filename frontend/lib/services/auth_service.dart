@@ -176,6 +176,23 @@ class AuthService {
     }
   }
 
+  /// Change password while authenticated or as profile update.
+  /// This sends the new password for the given email to the backend.
+  /// Returns true on success, false otherwise.
+  Future<bool> changePassword(String email, String newPassword) async {
+    try {
+      final response = await _dio.post('$_baseUrl/change-password',
+          data: {'email': email, 'newPassword': newPassword});
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) print('❌ [AUTH] changePassword error: $e');
+      return false;
+    }
+  }
+
   Future<AuthResponse> verifyCode(VerificationCodeRequest request) async {
     try {
       final response = await _apiService.post(
