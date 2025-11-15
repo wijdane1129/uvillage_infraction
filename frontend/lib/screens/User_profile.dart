@@ -24,6 +24,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late TextEditingController _usernameController;
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
+  late TextEditingController _currentPasswordController;
 
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       text: currentEmail.isNotEmpty ? currentEmail : _localUser.email,
     );
     _passwordController = TextEditingController(text: _localUser.password);
+    _currentPasswordController = TextEditingController();
   }
 
   @override
@@ -46,6 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _currentPasswordController.dispose();
     super.dispose();
   }
 
@@ -163,6 +166,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  TextField(
+                    controller: _currentPasswordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: "Current Password",
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: AppTheme.darkBg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: _selectedLanguage,
                     decoration: InputDecoration(
@@ -191,7 +208,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     controller: _passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: "Password",
+                      labelText: "New Password",
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: AppTheme.darkBg,
@@ -215,31 +232,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                       // update name/email locally first so UI reflects them
                       if (newName.isNotEmpty) {
-                        ref.read(agentNameProvider.notifier).setAgentName(newName);
+                        ref
+                            .read(agentNameProvider.notifier)
+                            .setAgentName(newName);
                       }
                       if (newEmail.isNotEmpty) {
-                        ref.read(agentEmailProvider.notifier).setAgentEmail(newEmail);
+                        ref
+                            .read(agentEmailProvider.notifier)
+                            .setAgentEmail(newEmail);
                       }
 
                       // Attempt to change password on backend if provided
                       if (newPassword.isNotEmpty) {
+                        final currentPassword =
+                            _currentPasswordController.text.trim();
                         final auth = AuthService();
-                        final emailForChange = newEmail.isNotEmpty
-                            ? newEmail
-                            : (ref.read(agentEmailProvider).isNotEmpty
-                                ? ref.read(agentEmailProvider)
-                                : _localUser.email);
-                        final success = await auth.changePassword(emailForChange, newPassword);
-                        if (success) {
+                        final emailForChange =
+                            newEmail.isNotEmpty
+                                ? newEmail
+                                : (ref.read(agentEmailProvider).isNotEmpty
+                                    ? ref.read(agentEmailProvider)
+                                    : _localUser.email);
+                        // Send currentPassword only when provided; backend must allow
+                        // authenticated password change without current password.
+                        final result = await auth.changePassword(
+                          emailForChange,
+                          currentPassword.isNotEmpty ? currentPassword : null,
+                          newPassword,
+                        );
+                        final bool ok = result['success'] == true;
+                        final String msg =
+                            result['message']?.toString() ??
+                            (ok
+                                ? 'Password changed'
+                                : 'Failed to change password');
+                        if (ok) {
                           _localUser.setPassword(newPassword);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Password changed successfully')),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to change password')),
-                          );
                         }
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(msg)));
                       }
 
                       setState(() {

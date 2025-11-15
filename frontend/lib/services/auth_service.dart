@@ -179,17 +179,56 @@ class AuthService {
   /// Change password while authenticated or as profile update.
   /// This sends the new password for the given email to the backend.
   /// Returns true on success, false otherwise.
-  Future<bool> changePassword(String email, String newPassword) async {
+  /// Attempts to change the password. Returns a map with `success` and `message`.
+  Future<Map<String, dynamic>> changePassword(
+    String email,
+    String? currentPassword,
+    String newPassword,
+  ) async {
     try {
-      final response = await _dio.post('$_baseUrl/change-password',
-          data: {'email': email, 'newPassword': newPassword});
-      if (response.statusCode == 200) {
-        return true;
+      // Attach stored token if available
+      final token = await AuthService.getToken();
+      final options = Options(headers: {});
+      if (token != null && token.isNotEmpty) {
+        options.headers?['Authorization'] = 'Bearer $token';
       }
-      return false;
+
+      final Map<String, dynamic> payload = {
+        'email': email,
+        'newPassword': newPassword,
+      };
+      if (currentPassword != null && currentPassword.isNotEmpty) {
+        payload['currentPassword'] = currentPassword;
+      }
+
+      final response = await _dio.post(
+        '$_baseUrl/change-password',
+        data: payload,
+        options: options,
+      );
+
+      if (response.statusCode == 200) {
+        final msg =
+            response.data is Map && response.data['message'] != null
+                ? response.data['message'].toString()
+                : 'Password changed successfully';
+        return {'success': true, 'message': msg};
+      }
+
+      final fallback = response.data?.toString() ?? 'Unexpected response';
+      return {'success': false, 'message': fallback};
+    } on DioException catch (e) {
+      String msg = 'Network error';
+      if (e.response != null) {
+        msg = e.response?.data?.toString() ?? 'Server error';
+      } else if (e.message != null) {
+        msg = e.message as String;
+      }
+      if (kDebugMode) print('❌ [AUTH] changePassword DioException: $msg');
+      return {'success': false, 'message': msg};
     } catch (e) {
       if (kDebugMode) print('❌ [AUTH] changePassword error: $e');
-      return false;
+      return {'success': false, 'message': e.toString()};
     }
   }
 

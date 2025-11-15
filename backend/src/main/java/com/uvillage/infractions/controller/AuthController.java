@@ -184,6 +184,30 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request, Principal principal) {
+        // Use authenticated principal (from JWT) as the trusted identity
+        String email = null;
+        if (principal != null) {
+            email = principal.getName();
+        } else if (request.getEmail() != null) {
+            // fallback to payload email (not recommended)
+            email = request.getEmail();
+        }
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Unauthenticated"));
+        }
+
+        boolean checkCurrent = request.getCurrentPassword() != null && !request.getCurrentPassword().isBlank();
+        AuthResponseDto resp = authService.changePasswordAuthenticated(email, request.getCurrentPassword(), checkCurrent, request.getNewPassword());
+
+        if (resp.isSuccess()) {
+            return ResponseEntity.ok(Map.of("success", true, "message", resp.getMessage(), "token", resp.getToken()));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", resp.getMessage()));
+    }
+
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(Principal principal) {
         try {

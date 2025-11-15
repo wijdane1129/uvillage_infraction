@@ -81,8 +81,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(requests -> requests
                 // Allow CORS preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Auth endpoints
-                .requestMatchers("/api/auth/**").permitAll()
+                // Public auth endpoints (login, registration, password reset flows)
+                .requestMatchers("/api/auth/login", "/api/auth/sign-up", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/verify-code", "/api/auth/verify-reset-code", "/api/auth/resend-code").permitAll()
+                // All other /api/auth/** endpoints require authentication (e.g. profile, change-password)
+                .requestMatchers("/api/auth/**").authenticated()
                 // Swagger/OpenAPI
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 // Dashboard stats
