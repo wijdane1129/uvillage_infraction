@@ -185,11 +185,23 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request, Principal principal) {
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request,
+                                            Principal principal,
+                                            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         // Use authenticated principal (from JWT) as the trusted identity
         String email = null;
         if (principal != null) {
             email = principal.getName();
+        } else if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            // If Principal is not populated (edge cases), try to extract the email from the JWT
+            try {
+                String token = authorizationHeader.substring(7);
+                if (jwtUtils.validateToken(token)) {
+                    email = jwtUtils.extractUsername(token);
+                }
+            } catch (Exception ex) {
+                logger.warn("Failed to extract username from Authorization header", ex);
+            }
         } else if (request.getEmail() != null) {
             // fallback to payload email (not recommended)
             email = request.getEmail();
