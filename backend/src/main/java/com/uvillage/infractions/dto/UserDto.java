@@ -5,7 +5,7 @@ import com.uvillage.infractions.entity.User; // Assurez-vous d'avoir l'entité U
 import lombok.Data;
 
 @Data
-public class UserDTO {
+class UserDTO {
     // Champs à exposer pour l'auteur (Agent)
     private Long rowid;
     private String username;
