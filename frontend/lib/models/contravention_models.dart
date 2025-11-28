@@ -75,8 +75,24 @@ class Contravention {
   final int? rowid;
   final String description;
   final List<ContraventionMediaModels> media;
+  final String status;
+  final String dateTime;
+  final String ref;
+  final String userAuthor;
+  final String tiers;
+  final String motif;
 
-  Contravention({this.rowid, required this.description, required this.media});
+  Contravention({
+    this.rowid,
+    required this.description,
+    required this.media,
+    required this.status,
+    required this.dateTime,
+    required this.ref,
+    required this.userAuthor,
+    required this.tiers,
+    required this.motif,
+  });
 
   Map<String, dynamic> toJson() {
     return {
@@ -90,6 +106,12 @@ class Contravention {
     return Contravention(
       rowid: json['rowid'] as int?,
       description: json['description'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      dateTime: json['dateTime'] as String? ?? '',
+      ref: json['ref'] as String? ?? '',
+      userAuthor: json['userAuthor'] as String? ?? '',
+      tiers: json['tiers'] as String? ?? '',
+      motif: json['motif'] as String? ?? '',
       media:
           (json['media'] as List<dynamic>? ?? [])
               .map(
@@ -98,6 +120,7 @@ class Contravention {
                 ),
               )
               .toList(),
+        
     );
   }
 }

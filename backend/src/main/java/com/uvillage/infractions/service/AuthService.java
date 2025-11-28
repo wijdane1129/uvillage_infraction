@@ -290,6 +290,37 @@ public class AuthService {
     }
 
 
+    /**
+     * Change password for an authenticated user. If checkCurrent is true,
+     * currentPassword must match the stored password. If checkCurrent is false,
+     * the JWT principal is considered sufficient proof of identity.
+     */
+    public AuthResponseDto changePasswordAuthenticated(String email, String currentPassword, boolean checkCurrent, String newPassword) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            return AuthResponseDto.builder().success(false).message("User not found").build();
+        }
+
+        if (checkCurrent) {
+            if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+                return AuthResponseDto.builder().success(false).message("Current password incorrect").build();
+            }
+        }
+
+        try {
+            validatePassword(newPassword);
+        } catch (IllegalArgumentException ex) {
+            return AuthResponseDto.builder().success(false).message(ex.getMessage()).build();
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        String jwt = jwtUtils.generateToken(user.getEmail());
+        return AuthResponseDto.builder().success(true).message("Password changed successfully").token(jwt).build();
+    }
+
+
 
 
 }
