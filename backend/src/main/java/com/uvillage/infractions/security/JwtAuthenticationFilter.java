@@ -41,6 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
+        // Log request path for easier debugging
+        logger.debug("[JWT FILTER] Incoming request: {} {}", request.getMethod(), request.getRequestURI());
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
@@ -48,17 +50,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Check header validity
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            logger.warn("[JWT FILTER] Missing or invalid Authorization header");
+            logger.warn("[JWT FILTER] No or invalid Authorization header for request {}", request.getRequestURI());
             filterChain.doFilter(request, response);
             return;
         }
 
         // Extract JWT
         jwt = authHeader.substring(7);
-
         try {
+            final String tokenPreview = jwt.length() > 24 ? jwt.substring(0, 24) + "..." : jwt;
+            logger.debug("[JWT FILTER] Received token (preview) for {}: {}", request.getRequestURI(), tokenPreview);
+
+            // Quick validate to print any parsing exceptions
+            boolean valid = false;
+            try {
+                valid = jwtUtils.validateToken(jwt);
+                logger.debug("[JWT FILTER] jwtUtils.validateToken => {}", valid);
+            } catch (Exception ex) {
+                logger.error("[JWT FILTER] Token validation threw: {}", ex.getMessage(), ex);
+            }
+
             username = jwtUtils.extractUsername(jwt);
-            logger.debug("[JWT FILTER] Username extracted from token: {}", username);
+            logger.debug("[JWT FILTER] Username extracted: {} (token valid={}) for request {}", username, valid, request.getRequestURI());
         } catch (Exception e) {
             logger.error("[JWT FILTER] Failed to extract username from token", e);
             filterChain.doFilter(request, response);
@@ -68,9 +81,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Validate token and authenticate user
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
+                logger.debug("[JWT FILTER] Loading userDetails for username: {}", username);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtUtils.isTokenValid(jwt, userDetails)) {
+                boolean tokenOk = false;
+                try {
+                    tokenOk = jwtUtils.isTokenValid(jwt, userDetails);
+                } catch (Exception ex) {
+                    logger.error("[JWT FILTER] isTokenValid threw: {}", ex.getMessage(), ex);
+                }
+                logger.debug("[JWT FILTER] isTokenValid result for {}: {}", username, tokenOk);
+
+                if (tokenOk) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -79,13 +101,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-
-                    logger.debug("[JWT FILTER] Authentication successful for user: {}", username);
+                    logger.debug("[JWT FILTER] Authentication set for user: {} on {}", username, request.getRequestURI());
                 } else {
-                    logger.warn("[JWT FILTER] Token is invalid for user: {}", username);
+                    logger.warn("[JWT FILTER] JWT validation failed for: {} on {}", username, request.getRequestURI());
                 }
             } catch (Exception e) {
-                logger.error("[JWT FILTER] Authentication process failed", e);
+                logger.error("[JWT FILTER] Error during authentication for request {}", request.getRequestURI(), e);
             }
         }
 

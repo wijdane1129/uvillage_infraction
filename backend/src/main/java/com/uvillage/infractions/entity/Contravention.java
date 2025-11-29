@@ -52,4 +52,54 @@ public class Contravention {
 
     @OneToMany(mappedBy="contravention", cascade=CascadeType.ALL)
     private List<ContraventionMedia> media;
+
+    // Explicit accessors to avoid reliance on Lombok during IDE/processor issues
+    public String getRef() {
+        return this.ref;
+    }
+
+    public Status getStatut() {
+        return this.statut;
+    }
+
+    public LocalDate getDateCreation() {
+        return this.dateCreation;
+    }
+
+    public ContraventionType getTypeContravention() {
+        return this.typeContravention;
+    }
+
+    public User getUserAuthor() {
+        return this.userAuthor;
+    }
+
+    public Resident getTiers() {
+        return this.tiers;
+    }
+
+    // Explicit setters to avoid Lombok reliance in IDE/processor
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setDateCreation(LocalDate dateCreation) {
+        this.dateCreation = dateCreation;
+    }
+
+    public void setRef(String ref) {
+        this.ref = ref;
+    }
+
+    public void setUserAuthor(User userAuthor) {
+        this.userAuthor = userAuthor;
+    }
+
+    public void setTiers(Resident tiers) {
+        this.tiers = tiers;
+    }
+
+    public void setTypeContravention(ContraventionType typeContravention) {
+        this.typeContravention = typeContravention;
+    }
 }

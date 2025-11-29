@@ -8,7 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,11 +21,10 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -50,10 +49,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:*",
+            "http://127.0.0.1:*"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setAllowedHeaders(Arrays.asList("*", "Authorization", "Content-Type", "Origin", "Accept"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -70,21 +72,22 @@ public class SecurityConfig {
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");
                     response.setStatus(401);
-                    response.getWriter().write("{\"error\":\"Unauthorized\"}");
-                })
-            )
+                    response.getWriter().write("{\"error\":\"Unauthorized\", \"message\":\"" + authException.getMessage() + "\"}");
+                }))
             .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(requests -> requests
                 // Allow CORS preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Public auth endpoints
-                .requestMatchers("/api/auth/login", "/api/auth/sign-up", "/api/auth/forgot-password",
-                    "/api/auth/reset-password", "/api/auth/verify-code", "/api/auth/verify-reset-code",
-                    "/api/auth/resend-code",
+                // Public auth endpoints (login, registration, password reset flows)
+                .requestMatchers(
+                    "/api/auth/login", "/api/auth/sign-up", "/api/auth/forgot-password", 
+                    "/api/auth/reset-password", "/api/auth/verify-code", "/api/auth/verify-reset-code", 
+                    "/api/auth/resend-code", "/api/auth/debug/**",
                     "/api/v1/auth/login", "/api/v1/auth/sign-up", "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password", "/api/v1/auth/verify-code", "/api/v1/auth/verify-reset-code",
-                    "/api/v1/auth/resend-code").permitAll()
-                // All other /api/auth/** and /api/v1/auth/** endpoints require authentication
+                    "/api/v1/auth/resend-code"
+                ).permitAll()
+                // All other /api/auth/** endpoints require authentication
                 .requestMatchers("/api/auth/**", "/api/v1/auth/**").authenticated()
                 // Swagger/OpenAPI
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

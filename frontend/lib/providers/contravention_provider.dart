@@ -9,6 +9,9 @@ import 'agent_auth_provider.dart';
 //       FORM DATA NOTIFIER
 // ===============================
 class ContraventionFormDataNotifier extends StateNotifier<ContraventionFormData> {
+    void setMotif(String motif) {
+      state = state.copyWith(motif: motif);
+    }
   ContraventionFormDataNotifier() : super(ContraventionFormData());
 
   void setStep(int step) {
@@ -75,4 +78,12 @@ final agentStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref
 
   // 3. Fetching statistics for this specific agent
   return await contraventionService.fetchStats(agentRowid);
+});
+
+// ===============================
+//     CONTRAVENTION TYPE LABELS
+// ===============================
+final contraventionTypeLabelsProvider = FutureProvider<List<String>>((ref) async {
+  final service = ref.read(contraventionServiceProvider);
+  return await service.fetchContraventionTypeLabels();
 });

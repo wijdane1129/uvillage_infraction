@@ -36,4 +36,9 @@ public class ContraventionType {
 
     @OneToMany(mappedBy="contraventionType")
     private List<Recidive> recidives;
+
+    // Explicit accessor to avoid Lombok dependency for IDE/build environments
+    public String getLabel() {
+        return this.label;
+    }
 }

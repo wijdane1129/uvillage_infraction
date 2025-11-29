@@ -231,6 +231,26 @@ public class AuthController {
         }
     }
 
+    // --------------------
+    // Debug endpoint: validate a token and return the subject (for local debugging only)
+    // Usage: send Authorization: Bearer <token>
+    @GetMapping("/debug/token")
+    public ResponseEntity<?> debugToken(@RequestHeader(name = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(Map.of("valid", false, "message", "No Bearer token provided"));
+        }
+        String token = authHeader.substring(7);
+        boolean valid = false;
+        String username = null;
+        try {
+            valid = jwtUtils.validateToken(token);
+            username = jwtUtils.extractUsername(token);
+        } catch (Exception ex) {
+            return ResponseEntity.status(401).body(Map.of("valid", false, "error", ex.getMessage()));
+        }
+        return ResponseEntity.ok(Map.of("valid", valid, "username", username));
+    }
+
     // --- Helper Methods ---
     private Map<String, Object> createErrorResponse(String message) {
         Map<String, Object> response = new HashMap<>();

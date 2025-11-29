@@ -23,22 +23,26 @@ class ContraventionFormData {
   final int currentStep;
   final String description;
   final List<ContraventionMediaDetail> media;
+  final String? motif;
 
   ContraventionFormData({
     this.currentStep = 2,
     this.description = '',
     this.media = const [],
+    this.motif,
   });
 
   ContraventionFormData copyWith({
     int? currentStep,
     String? description,
     List<ContraventionMediaDetail>? media,
+    String? motif,
   }) {
     return ContraventionFormData(
       currentStep: currentStep ?? this.currentStep,
       description: description ?? this.description,
       media: media ?? this.media,
+      motif: motif ?? this.motif,
     );
   }
 }
