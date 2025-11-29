@@ -610,6 +610,7 @@ class _AgentInfractionScreenLocalState
   ResidentModel? foundResident;
   bool isSearching = false;
   String? selectedBuilding;
+  String? selectedMotif;
 
   @override
   void dispose() {
@@ -619,12 +620,7 @@ class _AgentInfractionScreenLocalState
 
   @override
   Widget build(BuildContext context) {
-    const List<String> motifs = [
-      'Bruit excessif',
-      'Dégradation',
-      'Fumer',
-      'Autre',
-    ];
+    final motifsAsync = ref.watch(contraventionTypeLabelsProvider);
     const List<String> buildings = [
       'Immeuble A',
       'Immeuble B',
@@ -668,14 +664,29 @@ class _AgentInfractionScreenLocalState
                 color: AppTheme.darkBgAlt,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: CustomDropdownField(
-                label: 'Motif de l\'infraction',
-                icon: Icons.warning_amber,
-                hint: 'Sélectionner un motif',
-                items: motifs,
-                onChanged: (newValue) {
-                  debugPrint('Motif sélectionné: $newValue');
+              child: motifsAsync.when(
+                data: (motifs) {
+                  final uniqueMotifs = motifs.toSet().where((e) => e.trim().isNotEmpty).toList();
+                  String? motifValue = selectedMotif;
+                  if (motifValue == null || !uniqueMotifs.contains(motifValue)) {
+                    motifValue = null;
+                  }
+                  return CustomDropdownField(
+                    label: 'Motif de l\'infraction',
+                    icon: Icons.warning_amber,
+                    hint: 'Sélectionner un motif',
+                    items: uniqueMotifs,
+                    value: motifValue,
+                    onChanged: (newValue) {
+                      setState(() {
+                        selectedMotif = newValue;
+                      });
+                      debugPrint('Motif sélectionné: $newValue');
+                    },
+                  );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Erreur chargement motifs: $e'),
               ),
             ),
 
@@ -793,13 +804,24 @@ class _AgentInfractionScreenLocalState
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(20.0),
         child: GradientButton(
-          onPressed: () {
+            onPressed: () {
+            // Require motif selection before navigating to step 2
+            if (selectedMotif == null || selectedMotif!.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Le choix du motif est obligatoire pour continuer')),
+              );
+              return;
+            }
+
             // LOGIQUE DE NAVIGATION ICI
             Navigator.push(
               context,
               MaterialPageRoute(
                 // La destination est la page de connexion
-                builder: (context) => const ContraventionStep2Screen(),
+                builder: (context) => ContraventionStep2Screen(
+                  motif: selectedMotif,
+                  resident: foundResident,
+                ),
               ),
             );
           },

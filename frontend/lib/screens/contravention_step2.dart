@@ -5,11 +5,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../models/contravention_models.dart';
+import '../models/resident_model.dart';
 import '../providers/contravention_provider.dart';
 import 'package:infractions_app/widgets/gradient_button.dart';
+import '../screens/infraction_confirmation_screen.dart';
 
 class ContraventionStep2Screen extends ConsumerStatefulWidget {
-  const ContraventionStep2Screen({Key? key}) : super(key: key);
+  final String? motif;
+  final ResidentModel? resident;
+
+  const ContraventionStep2Screen({Key? key, this.motif, this.resident}) : super(key: key);
 
   @override
   ConsumerState<ContraventionStep2Screen> createState() =>
@@ -99,6 +104,9 @@ class _ContraventionStep2ScreenState
     // Watch the media list specifically for UI updates
     final selectedMedia = formState.media;
 
+    // Dropdown for motif selection
+    final labelsAsync = ref.watch(contraventionTypeLabelsProvider);
+
     return Scaffold(
       appBar: AppBar(
         // Style adjustments for a dark/themed app look based on the image
@@ -131,6 +139,8 @@ class _ContraventionStep2ScreenState
             _buildDescriptionField(),
             const SizedBox(height: 32),
             _buildNavigationButtons(context),
+            const SizedBox(height: 16),
+            // (Motif selection dropdown removed; motif is now selected only in AgentInfractionScreen)
           ],
         ),
       ),
@@ -349,8 +359,6 @@ class _ContraventionStep2ScreenState
   }
 
   Widget _buildNavigationButtons(BuildContext context) {
-    final isDescriptionValid = descriptionController.text.isNotEmpty;
-
     return Row(
       children: [
         
@@ -375,12 +383,38 @@ class _ContraventionStep2ScreenState
           child: GradientButton(
             text: 'Suivant',
             onPressed: () {
-              // Guard: do nothing if description is invalid
-              if (!isDescriptionValid) return;
-              // Update step and navigate to the next screen
+              // Guard: re-check description at time of click
+              final isDescriptionValid = descriptionController.text.trim().isNotEmpty;
+              if (!isDescriptionValid) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('La description est requise pour continuer')),
+                );
+                return;
+              }
+
+              // Enforce motif is provided (passed from previous step)
+              if (widget.motif == null || widget.motif!.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Le choix du motif est obligatoire pour continuer')),
+                );
+                return;
+              }
+
+              // Update step and navigate to confirmation screen using direct route
               ref.read(contraventionFormDataProvider.notifier).setStep(3);
-              // Ensure you have a route set up for '/contravention-step3'
-              Navigator.pushNamed(context, '/contravention-step3');
+
+              final formState = ref.read(contraventionFormDataProvider);
+              final mediaUrls = formState.media.map((m) => m.mediaUrl).toList();
+              final desc = descriptionController.text.trim();
+
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => InfractionConfirmationScreen(
+                  motif: widget.motif!,
+                  resident: widget.resident,
+                  description: desc,
+                  mediaUrls: mediaUrls,
+                ),
+              ));
             },
           ),
         ),

@@ -75,7 +75,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -116,12 +116,16 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <!-- Use release for strict compatibility with the JDK and to
+                             avoid javac internal API mismatches that can break
+                             annotation processors like Lombok when the IDE/compiler
+                             differ from the build JDK. -->
+                    <release>${java.version}</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <!-- FIX: ADDED THE VERSION HERE -->
                             <version>${lombok.version}</version>
                         </path>
                         <path>

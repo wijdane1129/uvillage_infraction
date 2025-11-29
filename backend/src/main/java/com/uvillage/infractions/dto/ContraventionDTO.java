@@ -1,47 +1,78 @@
 package com.uvillage.infractions.dto;
 
 import com.uvillage.infractions.entity.Contravention;
-import com.uvillage.infractions.entity.Resident;
-import com.uvillage.infractions.entity.StatutContravention; // Assurez-vous d'importer l'énumération StatutContravention si elle est utilisée
-import lombok.Data;
 import java.time.format.DateTimeFormatter;
 
-@Data
+/**
+ * Contravention DTO implemented without Lombok.
+ */
 public class ContraventionDTO {
-    
-    // Propriétés du DTO
     private String ref;
     private String statut;
-    private String dateHeure; 
-    
-    // DTOs imbriqués pour les relations
+    private String dateHeure;
     private ContraventionTypeDTO typeContravention;
-    private UserDTO userAuthor;
-    private TiersDTO tiers; 
-    
-    /**
-     * Convertit une entité Contravention en objet ContraventionDTO.
-     * Cette méthode statique est utilisée dans le service (via le .stream().map()).
-     * @param contravention L'entité à convertir.
-     * @return L'objet DTO formaté.
-     */
+    private UserDto userAuthor;
+    private TiersDTO tiers;
+
+    public ContraventionDTO() {
+    }
+
+    public String getRef() {
+        return ref;
+    }
+
+    public void setRef(String ref) {
+        this.ref = ref;
+    }
+
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
+    }
+
+    public String getDateHeure() {
+        return dateHeure;
+    }
+
+    public void setDateHeure(String dateHeure) {
+        this.dateHeure = dateHeure;
+    }
+
+    public ContraventionTypeDTO getTypeContravention() {
+        return typeContravention;
+    }
+
+    public void setTypeContravention(ContraventionTypeDTO typeContravention) {
+        this.typeContravention = typeContravention;
+    }
+
+    public UserDto getUserAuthor() {
+        return userAuthor;
+    }
+
+    public void setUserAuthor(UserDto userAuthor) {
+        this.userAuthor = userAuthor;
+    }
+
+    public TiersDTO getTiers() {
+        return tiers;
+    }
+
+    public void setTiers(TiersDTO tiers) {
+        this.tiers = tiers;
+    }
+
     public static ContraventionDTO fromEntity(Contravention contravention) {
+        if (contravention == null) return null;
         ContraventionDTO dto = new ContraventionDTO();
-        
         dto.setRef(contravention.getRef());
-        
-        // CORRECTION DE L'ERREUR DE TYPE (Ligne 34) :
-        // On récupère la valeur de statut comme un Object
-        // et on utilise .toString() pour la convertir en String pour le DTO.
+
         Object statutValue = contravention.getStatut();
-        if (statutValue != null) {
-            // Cela fonctionne que statutValue soit une Enum (imbriquée ou non) ou un String.
-            dto.setStatut(statutValue.toString()); 
-        } else {
-            dto.setStatut("INCONNU"); 
-        }
-        
-        // Formatage de la date pour l'affichage (jj/MM/aaaa)
+        dto.setStatut(statutValue != null ? statutValue.toString() : "INCONNU");
+
         if (contravention.getDateCreation() != null) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             dto.setDateHeure(contravention.getDateCreation().format(formatter));
@@ -49,20 +80,13 @@ public class ContraventionDTO {
             dto.setDateHeure("Date non définie");
         }
 
-        // Conversion des entités imbriquées en DTOs
         if (contravention.getTypeContravention() != null) {
             dto.setTypeContravention(ContraventionTypeDTO.fromEntity(contravention.getTypeContravention()));
         }
         if (contravention.getUserAuthor() != null) {
-            dto.setUserAuthor(UserDTO.fromEntity(contravention.getUserAuthor()));
+            dto.setUserAuthor(UserDto.fromEntity(contravention.getUserAuthor()));
         }
-        
-        // Le "tiers" est l'entité Resident
-        Resident resident = contravention.getTiers();
-        if (resident != null) {
-            dto.setTiers(TiersDTO.fromEntity(resident));
-        }
-        
+        dto.setTiers(TiersDTO.fromEntity(contravention.getTiers()));
         return dto;
     }
 }

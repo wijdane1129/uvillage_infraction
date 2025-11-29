@@ -1,20 +1,45 @@
-// Fichier : src/main/java/com/uvillage/infractions/dto/UserDTO.java
 package com.uvillage.infractions.dto;
 
-import com.uvillage.infractions.entity.User; // Assurez-vous d'avoir l'entité User
-import lombok.Data;
+import com.uvillage.infractions.entity.User;
 
-@Data
-public class UserDTO {
-    // Champs à exposer pour l'auteur (Agent)
-    private Long rowid;
+/**
+ * Simple DTO for User used in other DTO mappings.
+ * Implemented without Lombok to avoid annotation-processing dependency issues
+ * when the IDE annotation processor is unavailable.
+ */
+public class UserDto {
+    private Long id;
     private String username;
-    
-    // Méthode de conversion statique
-    public static UserDTO fromEntity(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setRowid(user.getId());
+    private String fullName;
+    private String email;
+    private String role;
+
+    public UserDto() { // Corrected: changed UserDTO() to UserDto()
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public static UserDto fromEntity(User user) { // Corrected: changed UserDTO to UserDto
+        if (user == null) return null;
+        UserDto dto = new UserDto(); // Corrected: changed UserDTO to UserDto
+        dto.setId(user.getId());
         dto.setUsername(user.getUsername());
+        dto.setFullName(user.getFullName());
+        dto.setEmail(user.getEmail());
+        if (user.getRole() != null) dto.setRole(user.getRole().name());
         return dto;
     }
 }

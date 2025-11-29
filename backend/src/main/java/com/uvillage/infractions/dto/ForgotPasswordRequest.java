@@ -1,12 +1,17 @@
 package com.uvillage.infractions.dto;
-import jakarta.validation.constraints.*;
-import lombok.*;
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class ForgotPasswordRequest{
     @NotBlank(message="email is required")
     @Email(message="Enter a valid Email")
     private String email;
+
+    public ForgotPasswordRequest() {}
+
+    public ForgotPasswordRequest(String email) { this.email = email; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 }
