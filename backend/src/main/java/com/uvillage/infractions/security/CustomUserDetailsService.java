@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 /**
- * Service pour charger les détails de l'utilisateur (implémentation UserDetailsService).
+ * Service pour charger les détails de l'utilisateur.
  * Spring Security l'utilise pour vérifier l'utilisateur pendant la connexion.
  */
 @Service
@@ -18,9 +18,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
 
     /**
-     * Explicit constructor to satisfy IDEs / language servers that do not
-     * process Lombok's @RequiredArgsConstructor. Spring will use this
-     * constructor to inject the repository.
+     * Constructor injection of UserRepository.
      */
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -28,11 +26,14 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // L'email est utilisé comme le 'username' dans notre entité User
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'email: " + email));
 
-        // Mappez notre entité User vers un UserDetails Spring Security.
+        // Récupère l'utilisateur depuis la base par email (email = username dans notre système)
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Utilisateur non trouvé avec l'email: " + email
+                ));
+
+        // Mappe le rôle de l'utilisateur vers Spring Security
         String role = user.getRole() != null ? user.getRole().name() : "AGENT";
 
         return org.springframework.security.core.userdetails.User.builder()

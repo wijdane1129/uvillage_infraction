@@ -1,49 +1,51 @@
 package com.uvillage.infractions.controller;
 
 import com.uvillage.infractions.dto.*;
+import com.uvillage.infractions.entity.User;
+import com.uvillage.infractions.repository.UserRepository;
 import com.uvillage.infractions.service.AuthService;
+import com.uvillage.infractions.security.JwtUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Contrôleur REST pour la gestion de l'authentification (connexion, inscription, mot de passe oublié).
+ * REST controller for authentication and profile management.
  */
 @RestController
 @RequestMapping({"/api/v1/auth", "/api/auth"})
 public class AuthController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
     private final AuthService authService;
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtils jwtUtils;
+    private final UserRepository userRepository;
 
-    @Autowired
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService,
+                          AuthenticationManager authenticationManager,
+                          JwtUtils jwtUtils,
+                          UserRepository userRepository) {
         this.authService = authService;
+        this.authenticationManager = authenticationManager;
+        this.jwtUtils = jwtUtils;
+        this.userRepository = userRepository;
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        try {
-            LoginResponse response = authService.authenticateUser(loginRequest);
-            return ResponseEntity.ok(response);
-        } catch (AuthenticationException e) {
-            // Mauvais identifiants (email ou mot de passe incorrect)
-            return ResponseEntity.status(401).body("Email ou mot de passe invalide.");
-        } catch (Exception e) {
-            // Log the exception stacktrace to help debugging and return a generic 500
-            log.error("Erreur interne lors de la tentative de connexion pour email={}", loginRequest.getEmail(), e);
-            return ResponseEntity.status(500).body("Erreur interne du serveur lors de la connexion.");
-        }
-    }
-
+    // --- Registration ---
     @PostMapping("/sign-up")
     public ResponseEntity<?> signUp(@Valid @RequestBody CreateAccountRequest request) {
         try {
@@ -52,24 +54,71 @@ public class AuthController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
         } catch (Exception ex) {
-            log.error("Erreur lors de l'inscription pour email={}", request.getEmail(), ex);
+            logger.error("Error during sign up for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred during sign up"));
         }
     }
 
+    // --- Login ---
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        logger.info("[AUTH] Attempting login for: {}", request.getEmail());
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtils.generateToken(userDetails);
+
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String nomComplet = (user.getFullName() != null && !user.getFullName().isEmpty())
+                    ? user.getFullName()
+                    : user.getUsername();
+
+            LoginResponse response = LoginResponse.builder()
+                    .token(token)
+                    .email(user.getEmail())
+                    .agentRowid(user.getId())
+                    .nomComplet(nomComplet)
+                    .role(user.getRole() != null ? user.getRole().name() : "AGENT")
+                    .build();
+
+            logger.info("[AUTH] ✅ Login successful for: {} (ID: {}, Role: {})",
+                    user.getEmail(), user.getId(), user.getRole());
+
+            return ResponseEntity.ok(response);
+
+        } catch (AuthenticationException e) {
+            logger.error("[AUTH] ❌ Login failed for: {} - Invalid credentials", request.getEmail());
+            return ResponseEntity.status(401).body("Invalid credentials");
+
+        } catch (Exception e) {
+            logger.error("[AUTH] ❌ Internal error for: {}", request.getEmail(), e);
+            return ResponseEntity.status(500)
+                    .body("An internal error occurred. Please try again later.");
+        }
+    }
+
+    // --- Forgot Password ---
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
             authService.forgotPassword(request);
-            return ResponseEntity.ok(createSuccessResponse("If your email exists, you will receive reset instructions"));
+            return ResponseEntity.ok(createSuccessResponse(
+                    "If your email exists, you will receive reset instructions"));
         } catch (Exception ex) {
-            log.error("Erreur lors de la demande de mot de passe oublié pour email={}", request.getEmail(), ex);
+            logger.error("Error during forgot password request for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred"));
         }
     }
 
+    // --- Verify Email / Reset Codes ---
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@Valid @RequestBody VerificationCodeRequest request) {
         try {
@@ -78,7 +127,7 @@ public class AuthController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
         } catch (Exception ex) {
-            log.error("Erreur lors de la vérification du code pour email={}", request.getEmail(), ex);
+            logger.error("Error verifying code for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred during verification"));
         }
@@ -92,7 +141,7 @@ public class AuthController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
         } catch (Exception ex) {
-            log.error("Erreur lors de la vérification du code de reset pour email={}", request.getEmail(), ex);
+            logger.error("Error verifying reset code for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred during reset code verification"));
         }
@@ -106,7 +155,7 @@ public class AuthController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
         } catch (Exception ex) {
-            log.error("Erreur lors de la réinitialisation du mot de passe", ex);
+            logger.error("Error during password reset", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred during password reset"));
         }
@@ -119,12 +168,70 @@ public class AuthController {
             authService.resendVerificationCode(email);
             return ResponseEntity.ok(createSuccessResponse("Verification code sent to your email"));
         } catch (Exception ex) {
-            log.error("Erreur lors du renvoi du code de vérification pour email={}", request.get("email"), ex);
+            logger.error("Error resending verification code for email={}", request.get("email"), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred"));
         }
     }
 
+    // --- Profile Management ---
+    @PutMapping("/edit-profile")
+    public ResponseEntity<?> editProfile(@Valid @RequestBody EditProfileRequest request) {
+        try {
+            AuthResponseDto response = authService.editProfile(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("An error occurred during profile update"));
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request,
+                                            Principal principal,
+                                            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        String email = null;
+
+        if (principal != null) email = principal.getName();
+        else if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            try {
+                String token = authorizationHeader.substring(7);
+                if (jwtUtils.validateToken(token)) email = jwtUtils.extractUsername(token);
+            } catch (Exception ex) {
+                logger.warn("Failed to extract username from Authorization header", ex);
+            }
+        } else if (request.getEmail() != null) email = request.getEmail();
+
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Unauthenticated"));
+
+        boolean checkCurrent = request.getCurrentPassword() != null && !request.getCurrentPassword().isBlank();
+        AuthResponseDto resp = authService.changePasswordAuthenticated(email, request.getCurrentPassword(), checkCurrent, request.getNewPassword());
+
+        if (resp.isSuccess())
+            return ResponseEntity.ok(Map.of("success", true, "message", resp.getMessage(), "token", resp.getToken()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", resp.getMessage()));
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Principal principal) {
+        try {
+            if (principal == null || principal.getName() == null)
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(createErrorResponse("Unauthorized"));
+
+            UserProfileDto profile = authService.getProfileByEmail(principal.getName());
+            if (profile == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(createErrorResponse("User not found"));
+
+            return ResponseEntity.ok(profile);
+
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("An error occurred"));
+        }
+    }
+
+    // --- Helper Methods ---
     private Map<String, Object> createErrorResponse(String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../config/app_theme.dart';
+// Accès au dégradé et aux couleurs
+import '../config/app_theme.dart'; 
 
 class GradientButton extends StatelessWidget {
   final String text;
@@ -7,6 +8,8 @@ class GradientButton extends StatelessWidget {
   final bool isLoading;
   // true = primary (gradient), false = secondary (outlined)
   final bool isPrimary;
+  final double? height;
+  final double? radius;
 
   const GradientButton({
     super.key,
@@ -14,54 +17,56 @@ class GradientButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.isPrimary = true,
+    this.height,
+    this.radius,
   });
 
   @override
   Widget build(BuildContext context) {
-    final decoration =
-        isPrimary
-            ? BoxDecoration(
-              borderRadius: const BorderRadius.all(Radius.circular(12)),
-              gradient: AppTheme.buttonGradient,
-            )
-            : BoxDecoration(
-              borderRadius: const BorderRadius.all(Radius.circular(12)),
-              border: Border.all(color: AppTheme.borderColor, width: 2),
-              color: Colors.transparent,
-            );
+    final double effectiveRadius = radius ?? 12.0;
+    final double effectiveHeight = height ?? 52.0;
+
+    final decoration = isPrimary
+        ? BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(effectiveRadius)),
+            gradient: AppTheme.buttonGradient, 
+          )
+        : BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(effectiveRadius)),
+            border: Border.all(color: AppTheme.borderColor, width: 2), 
+            color: Colors.transparent,
+          );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 8.0),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isLoading ? null : onPressed,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(effectiveRadius),
           child: Container(
-            height: 52,
+            height: effectiveHeight,
             alignment: Alignment.center,
             decoration: decoration,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child:
-                isLoading
-                    ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppTheme.textPrimary,
-                        ),
-                      ),
-                    )
-                    : Text(
-                      text,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.textPrimary,
                       ),
                     ),
+                  )
+                : Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
           ),
         ),
       ),

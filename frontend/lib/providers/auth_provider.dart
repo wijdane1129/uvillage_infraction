@@ -103,6 +103,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return response;
   }
 
+  Future<AuthResponse> resendVerificationCode(String email) async {
+    state = state.copyWith(isLoading: true, error: null);
+    final response = await _authService.resendVerificationCode(email);
+    state = state.copyWith(
+      isLoading: false,
+      lastResponse: response,
+      successMessage: response.success ? response.message : null,
+      error: !response.success ? response.message : null,
+    );
+    return response;
+  }
+
   void clearMessages() {
     state = state.copyWith(error: null, successMessage: null);
   }

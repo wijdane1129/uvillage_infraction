@@ -1,7 +1,6 @@
 name: infractions_app
 description: "A Flutter project for Constatation des Infractions."
 publish_to: 'none' # Prevent accidental publishing
-
 version: 1.0.0+1
 
 environment:
@@ -12,7 +11,7 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^2.3.6
   cupertino_icons: ^1.0.8
-  dio: ^5.3.3
+  dio: ^5.9.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_form_builder: ^9.1.1
@@ -22,9 +21,11 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.19.0
-  fl_chart: ^0.60.0
+  fl_chart: ^0.68.0
   data_tables: ^1.1.1
   image_picker: ^0.8.7+5
+  file_picker: ^8.0.0
+  http: ^1.1.0
   camera: ^0.11.1+1
   fluttertoast: ^8.2.1
   another_flushbar: ^1.11.0
@@ -34,14 +35,14 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0 # Linting & best practices
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
 
   assets:
-    # Add your local assets here
+    - assets/images/illustration.png
+    - assets/data/compus_euromed_chambres.csv
+    # Add any other local assets here
     # - assets/images/
     # - assets/fonts/
-
-

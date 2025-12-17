@@ -1,26 +1,20 @@
+// Fichier : src/main/java/com/uvillage/infractions/dto/UserDTO.java
 package com.uvillage.infractions.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.uvillage.infractions.entity.User; // Assurez-vous d'avoir l'entité User
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class UserDto {
-    @NotBlank(message = "Full name is required")
-    private String fullName;
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Please provide a valid email address")
-    private String email;
-
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters long")
-    private String password;
+class UserDTO {
+    // Champs à exposer pour l'auteur (Agent)
+    private Long rowid;
+    private String username;
+    
+    // Méthode de conversion statique
+    public static UserDTO fromEntity(User user) {
+        UserDTO dto = new UserDTO();
+        dto.setRowid(user.getId());
+        dto.setUsername(user.getUsername());
+        return dto;
+    }
 }
