@@ -9,6 +9,7 @@ import 'screens/create_password_screen.dart';
 import 'screens/contravention_step2.dart';
 import 'screens/User_profile.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/dashboard_responsable_screen.dart';
 import 'screens/contravention_details_screen.dart';
 import 'models/contravention_models.dart';
 import 'screens/accepter_contravention_screen.dart';
@@ -24,35 +25,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sample contravention to show the details screen when launching the app
-    final sample = Contravention(
-      rowid: 1,
-      description: 'Stationnement interdit sur trottoir',
-      media: [
-        ContraventionMediaModels(
-          id: 1,
-          mediaUrl: 'https://via.placeholder.com/300',
-          mediaType: 'image',
-        ),
-        ContraventionMediaModels(
-          id: 2,
-          mediaUrl:
-              'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
-          mediaType: 'video',
-        ),
-      ],
-      status: 'SOUS_VERIFICATION',
-      dateTime: DateTime.now().toIso8601String(),
-      ref: 'REF-12345',
-      userAuthor: 'agent@example.com',
-      tiers: 'Resident A',
-      motif: 'Obstruction de la voie',
-    );
-
     return MaterialApp(
       title: 'Infractions App',
       theme: ThemeData.dark(),
-      home: ContraventionDetailsScreen(contravention: sample),
+      home: const DashboardResponsableScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

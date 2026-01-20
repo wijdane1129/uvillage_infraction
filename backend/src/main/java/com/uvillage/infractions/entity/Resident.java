@@ -37,4 +37,8 @@ public class Resident {
 
     @OneToMany(mappedBy="resident")
     private List<Recidive> recidives;
+
+    public String getNomResident() {
+        return prenom != null ? prenom + " " + nom : nom;
+    }
 }

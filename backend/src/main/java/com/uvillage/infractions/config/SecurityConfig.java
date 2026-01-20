@@ -68,8 +68,9 @@ public class SecurityConfig {
             // to avoid accidental matcher ordering or path issues.
             // This is safe for local development; tighten for production.
             .requestMatchers("/api/auth/**").permitAll()
-            // Permit dashboard stats for testing/frontend development
+            // Permit dashboard stats and responsable dashboard for testing/frontend development
             .requestMatchers("/api/dashboard/stats").permitAll()
+            .requestMatchers("/api/dashboard/responsable").permitAll()
             .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 

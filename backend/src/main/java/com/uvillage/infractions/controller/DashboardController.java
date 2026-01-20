@@ -1,6 +1,7 @@
 package com.uvillage.infractions.controller;
 
 import com.uvillage.infractions.dto.DashboardStatsDto;
+import com.uvillage.infractions.dto.DashboardResponsableDto;
 import com.uvillage.infractions.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,12 @@ public class DashboardController {
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDto> getStats() {
         DashboardStatsDto dto = dashboardService.getDashboardStats();
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/responsable")
+    public ResponseEntity<DashboardResponsableDto> getDashboardResponsable() {
+        DashboardResponsableDto dto = dashboardService.getDashboardResponsable();
         return ResponseEntity.ok(dto);
     }
 }
