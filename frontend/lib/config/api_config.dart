@@ -29,6 +29,9 @@ class ApiConfig {
   static String get backendDashboardUrl =>
       '$BACKEND_API_URL$BACKEND_DASHBOARD_ENDPOINT';
 
+  /// Base URL for API (alias for BACKEND_API_URL)
+  static String get baseUrl => BACKEND_API_URL;
+
   /// Get the appropriate dashboard URL based on configuration
   static String getDashboardUrl() {
     if (USE_MOCK_DATA) {
@@ -39,3 +42,4 @@ class ApiConfig {
     return backendDashboardUrl;
   }
 }
+

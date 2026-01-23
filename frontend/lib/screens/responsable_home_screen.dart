@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'dashboard_responsable_screen.dart';
 import 'residents_screen.dart';
+import 'configuration_motifs_screen.dart';
 
 class ResponsableHomeScreen extends StatefulWidget {
   const ResponsableHomeScreen({Key? key}) : super(key: key);
@@ -16,6 +17,7 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
   final List<Widget> _screens = const [
     DashboardResponsableScreen(),
     ResidentsScreen(),
+    ConfigurationMotifsScreen(),
   ];
 
   @override
@@ -40,6 +42,10 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.people),
             label: 'Résidents',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Motifs',
           ),
         ],
       ),

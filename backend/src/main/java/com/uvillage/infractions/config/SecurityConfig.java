@@ -71,6 +71,8 @@ public class SecurityConfig {
             // Permit dashboard stats and responsable dashboard for testing/frontend development
             .requestMatchers("/api/dashboard/stats").permitAll()
             .requestMatchers("/api/dashboard/responsable").permitAll()
+            // Permit motifs endpoint for configuration
+            .requestMatchers("/api/motifs/**").permitAll()
             .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
@@ -81,14 +83,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-    // Allow localhost and 127.0.0.1 on any port during development (covers Flutter web dev ports)
-    // Use allowed origin PATTERNS to allow variable dev ports without listing them individually.
-    configuration.setAllowedOriginPatterns(Arrays.asList(
-        "http://localhost:*",
-        "http://127.0.0.1:*"
-    ));
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:*",
+            "http://127.0.0.1:*"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization"));
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
