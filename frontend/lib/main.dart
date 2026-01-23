@@ -14,6 +14,7 @@ import 'screens/contravention_details_screen.dart';
 import 'models/contravention_models.dart';
 import 'screens/accepter_contravention_screen.dart';
 import 'screens/classer_sans_suite_screen.dart';
+import 'screens/responsable_home_screen.dart';
 
 void main() {
   // Wrap the app with ProviderScope so Riverpod providers work
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Infractions App',
       theme: ThemeData.dark(),
-      home: const DashboardResponsableScreen(),
+      home: const ResponsableHomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

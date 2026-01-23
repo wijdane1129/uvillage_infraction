@@ -4,6 +4,7 @@ import '../config/app_theme.dart';
 import '../models/contravention_models.dart';
 import 'media_viewer.dart';
 import 'accepter_contravention_screen.dart';
+import 'assign_contravention_screen.dart';
 
 class ContraventionDetailsScreen extends StatelessWidget {
   final Contravention contravention;
@@ -64,6 +65,38 @@ class ContraventionDetailsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _mediaSection(context),
             const SizedBox(height: 24),
+            // Bouton Assigner à un résident
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00d4ff),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AssignContraventionScreen(
+                        contraventionId: contravention.rowid ?? 0,
+                        motif: contravention.motif,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Assigner à un Résident',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [

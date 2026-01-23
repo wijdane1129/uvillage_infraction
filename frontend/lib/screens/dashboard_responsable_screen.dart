@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/dashboard_models.dart';
+import '../models/contravention_models.dart';
 import '../services/api_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'contravention_details_screen.dart';
 
 class DashboardResponsableScreen extends StatefulWidget {
   const DashboardResponsableScreen({Key? key}) : super(key: key);
@@ -519,7 +521,27 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
               ),
               ElevatedButton(
                 onPressed: () {
-                  // Show details
+                  // Convert RecentContravention to Contravention
+                  final contravention = Contravention(
+                    rowid: infraction.rowid,
+                    description: infraction.description,
+                    media: [],
+                    status: infraction.statut,
+                    dateTime: infraction.dateCreation,
+                    ref: infraction.ref,
+                    userAuthor: infraction.agentName,
+                    tiers: infraction.residentName,
+                    motif: infraction.motif,
+                  );
+                  
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ContraventionDetailsScreen(
+                        contravention: contravention,
+                      ),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.purpleAccent,
