@@ -5,6 +5,8 @@ import '../config/api_config.dart';
 // Removed dart:convert/http usage in favor of Dio which is already configured
 
 class ApiService {
+  static final ApiService _instance = ApiService._internal();
+  
   final Dio _dio = Dio();
   final Dio _crm_dio = Dio(); // Separate instance for CRM API
   final String _baseUrl = const String.fromEnvironment(
@@ -13,7 +15,12 @@ class ApiService {
   );
   final _storage = StorageService();
 
-  ApiService() {
+  // Singleton factory
+  factory ApiService() {
+    return _instance;
+  }
+
+  ApiService._internal() {
     // Setup backend API
     _dio.options.baseUrl = _baseUrl;
     _dio.options.headers = {
@@ -33,14 +40,17 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _storage.getToken();
+          print('DEBUG: ApiService interceptor - token: ${token != null ? 'present' : 'missing'}');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
+            print('DEBUG: Authorization header added: Bearer ${token.substring(0, 20)}...');
           }
           return handler.next(options);
         },
         onError: (DioException error, handler) {
           if (error.response?.statusCode == 401) {
             // Handle token expiration
+            print('DEBUG: 401 error received, clearing token');
             _storage.deleteToken();
           }
           return handler.next(error);
@@ -66,11 +76,20 @@ class ApiService {
   }
 
   Exception _handleError(DioException e) {
+    print('API Error: ${e.toString()}');
+    print('API Error Response: ${e.response?.data}');
+    print('API Error Status Code: ${e.response?.statusCode}');
+    
     if (e.response != null) {
       final data = e.response!.data;
-      return Exception(data['message'] ?? 'An error occurred');
+      if (data is Map) {
+        return Exception(data['message'] ?? data.toString() ?? 'An error occurred');
+      } else if (data is String) {
+        return Exception(data);
+      }
+      return Exception(data.toString());
     }
-    return Exception('Network error occurred');
+    return Exception('Network error: ${e.message}');
   }
 
   Future<DashboardStats> fetchDashboardStats() async {

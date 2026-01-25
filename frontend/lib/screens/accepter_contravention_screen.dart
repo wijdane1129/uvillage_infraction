@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:infractions_app/models/contravention_recidive_models.dart';
 import '../config/app_theme.dart';
 import '../models/contravention_models.dart';
+import '../services/api_service.dart';
 
 class AccepterContraventionScreen extends StatefulWidget {
   final Contravention contravention;
@@ -330,8 +331,75 @@ class _AccepterContraventionScreenState
     );
   }
 
-  void _onConfirm() {
-    Navigator.of(context).pop(true);
+  void _onConfirm() async {
+    try {
+      // Afficher un dialog de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.purpleAccent),
+          ),
+        ),
+      );
+
+      // Appeler l'endpoint de confirmation et génération de PDF
+      final apiService = ApiService();
+      final ref = widget.contravention.ref;
+      
+      print('DEBUG: Calling confirm endpoint for ref: $ref');
+      
+      final response = await apiService.post(
+        '/contravention/$ref/confirm',
+        {},
+      );
+
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response data: ${response.data}');
+
+      // Fermer le dialog de chargement
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (response.statusCode == 200) {
+        // Succès - afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✓ Facture PDF générée avec succès!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Attendre un peu puis retourner à l'écran précédent
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        throw Exception('Erreur lors de la génération: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('DEBUG: Error in _onConfirm: $e');
+      
+      // Fermer le dialog de chargement s'il est encore ouvert
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      // Afficher un message d'erreur détaillé
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   int _montantValue(ContraventionRecidiveModels r) {

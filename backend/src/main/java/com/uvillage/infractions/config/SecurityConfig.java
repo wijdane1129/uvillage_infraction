@@ -73,6 +73,10 @@ public class SecurityConfig {
             .requestMatchers("/api/dashboard/responsable").permitAll()
             // Permit motifs endpoint for configuration
             .requestMatchers("/api/motifs/**").permitAll()
+            // Permit contravention confirmation endpoint for PDF generation
+            .requestMatchers(HttpMethod.POST, "/api/contravention/*/confirm").permitAll()
+            // Permit contravention GET endpoint
+            .requestMatchers(HttpMethod.GET, "/api/contravention/**").permitAll()
             .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
