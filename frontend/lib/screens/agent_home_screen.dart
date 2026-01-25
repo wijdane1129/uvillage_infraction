@@ -220,9 +220,7 @@ PreferredSizeWidget _buildAppBar(String agentName, BuildContext context) {
         ),
       ],
     ),
-    actions: [
-      IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
-    ],
+    
   );
 }
 
@@ -402,21 +400,9 @@ class AgentBottomNavBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildNavItem(context, Icons.home, 'Home', 0, currentIndex),
-            _buildNavItem(
-              context,
-              Icons.list_alt,
-              'Infractions',
-              1,
-              currentIndex,
-            ),
+           
             const SizedBox(width: 60),
-            _buildNavItem(
-              context,
-              Icons.bar_chart,
-              'Statistiques',
-              2,
-              currentIndex,
-            ),
+            
             _buildNavItem(context, Icons.person, 'Profil', 3, currentIndex),
           ],
         ),

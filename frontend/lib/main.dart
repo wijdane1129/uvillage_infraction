@@ -8,6 +8,7 @@ import 'screens/create_account_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'services/api_client.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/sign_in_screen.dart';
  // API client with JWT
 
 // Global navigation key for navigation from anywhere
@@ -44,13 +45,15 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // Startup screen checks login state before navigating
-      home: const WelcomeScreen(),
+       initialRoute: '/welcome',
 
       // Optional named routes for quick navigation
       routes: {
-        '/create-account': (_) => const SignUpScreen(),
-        '/forgot-password': (_) => const ForgotPasswordScreen(),
-      },
+    '/welcome': (_) => const WelcomeScreen(),
+    '/signin': (_) => const SignInScreen(),
+    '/signup': (_) => const SignUpScreen(),
+    '/forgot-password': (_) => const ForgotPasswordScreen(),
+  },
     );
   }
 }

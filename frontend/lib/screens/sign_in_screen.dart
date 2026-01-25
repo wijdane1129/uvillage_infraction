@@ -8,6 +8,8 @@ import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import 'forgot_password_screen.dart';
+import 'sign_up_screen.dart';
+import 'sign_up_screen.dart';
 
 // 💡 CHANGEMENT : Étend ConsumerStatefulWidget pour utiliser Riverpod
 class SignInScreen extends ConsumerStatefulWidget {
@@ -49,12 +51,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
       // Inject Authorization header for future requests
       try {
-        ApiClient.dio.options.headers['Authorization'] = 'Bearer ${response.token}';
+        ApiClient.dio.options.headers['Authorization'] =
+            'Bearer ${response.token}';
       } catch (_) {}
 
       // Update global Riverpod state
-      ref.read(currentAgentIdProvider.notifier).setAgentId(response.agentRowid ?? 0);
-      ref.read(agentNameProvider.notifier).setAgentName(response.nomComplet ?? 'Agent Inconnu');
+      ref
+          .read(currentAgentIdProvider.notifier)
+          .setAgentId(response.agentRowid ?? 0);
+      ref
+          .read(agentNameProvider.notifier)
+          .setAgentName(response.nomComplet ?? 'Agent Inconnu');
       ref.read(agentEmailProvider.notifier).setAgentEmail(response.email);
 
       _showSnackBar(
@@ -136,9 +143,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              Text('Welcome Back', style: Theme.of(context).textTheme.headlineLarge),
+              Text(
+                'Welcome Back',
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
               const SizedBox(height: 5),
-              Text('Log in to manage campus infractions.', style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                'Log in to manage campus infractions.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 40),
               Form(
                 child: Column(
@@ -146,7 +159,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(hintText: 'Email Address'),
+                      decoration: const InputDecoration(
+                        hintText: 'Email Address',
+                      ),
                       style: const TextStyle(color: AppTheme.textPrimary),
                     ),
                     const SizedBox(height: 16),
@@ -157,10 +172,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         hintText: 'Password',
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                             color: AppTheme.textSecondary,
                           ),
-                          onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                          onPressed:
+                              () => setState(
+                                () => _isPasswordVisible = !_isPasswordVisible,
+                              ),
                         ),
                       ),
                       style: const TextStyle(color: AppTheme.textPrimary),
@@ -175,17 +195,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
                       );
                     },
-                    child: const Text('Forgot password?', style: TextStyle(color: AppTheme.purpleAccent)),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.shield_outlined, color: AppTheme.cyanAccent, size: 18),
-                      const SizedBox(width: 4),
-                      Text('Secure', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.cyanAccent)),
-                    ],
+                    child: const Text(
+                      'Forgot password?',
+                      style: TextStyle(color: AppTheme.purpleAccent),
+                    ),
                   ),
                 ],
               ),
@@ -194,30 +212,45 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(color: AppTheme.backgroundPrimary, strokeWidth: 2),
-                        )
-                      : const Text('Login'),
+                  child:
+                      _isLoading
+                          ? SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: AppTheme.backgroundPrimary,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text('Login'),
                 ),
               ),
-              const SizedBox(height: 100),
+              const SizedBox(height: 24),
               Center(
-                child: RichText(
-                  text: TextSpan(
-                    text: 'Need help? ',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    children: <TextSpan>[
-                      TextSpan(
-                        text: 'Contact Support',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.purpleAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SignUpScreen(),
                       ),
-                    ],
+                    );
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      text: 'Don\'t have an account? ',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      children: <TextSpan>[
+                        TextSpan(
+                          text: 'Sign up',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.purpleAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

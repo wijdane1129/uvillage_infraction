@@ -7,24 +7,25 @@ import '../models/resident_model.dart';
 import '../providers/contravention_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/agent_auth_provider.dart';
+import 'agent_home_screen.dart';
 
 class InfractionConfirmationScreen extends ConsumerWidget {
-
-    // Debug: Test /contraventions/debug/whoami endpoint
-    Future<void> testWhoAmI(BuildContext context) async {
-      try {
-        final response = await ApiClient.dio.get('/contraventions/debug/whoami');
-        print('✅ [WHOAMI] ${response.data}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('WHOAMI: ${response.data}')),
-        );
-      } catch (e) {
-        print('❌ [WHOAMI] Erreur: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur WHOAMI: $e')),
-        );
-      }
+  // Debug: Test /contraventions/debug/whoami endpoint
+  Future<void> testWhoAmI(BuildContext context) async {
+    try {
+      final response = await ApiClient.dio.get('/contraventions/debug/whoami');
+      print('✅ [WHOAMI] ${response.data}');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('WHOAMI: ${response.data}')));
+    } catch (e) {
+      print('❌ [WHOAMI] Erreur: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur WHOAMI: $e')));
     }
+  }
+
   final String motif;
   final ResidentModel? resident;
   final String description;
@@ -48,7 +49,10 @@ class InfractionConfirmationScreen extends ConsumerWidget {
           preferredSize: const Size.fromHeight(24.0),
           child: Column(
             children: const [
-              Text('Étape 3: Confirmation', style: TextStyle(color: AppTheme.textSecondary)),
+              Text(
+                'Étape 3: Confirmation',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
               SizedBox(height: 8),
             ],
           ),
@@ -66,7 +70,9 @@ class InfractionConfirmationScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.darkBgAlt,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppTheme.borderColor.withOpacity(0.7)),
+                  border: Border.all(
+                    color: AppTheme.borderColor.withOpacity(0.7),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,50 +80,72 @@ class InfractionConfirmationScreen extends ConsumerWidget {
                     Text(
                       "Récapitulatif de l'infraction",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 18),
 
                     _buildLine(context, 'Motif', motif),
                     const Divider(color: Colors.transparent, height: 12),
-                    _buildLine(context, 'Résident', resident != null ? resident!.fullName : 'Non renseigné'),
+                    _buildLine(
+                      context,
+                      'Résident',
+                      resident != null ? resident!.fullName : 'Non renseigné',
+                    ),
                     const SizedBox(height: 12),
-                    Text('Description', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary)),
+                    Text(
+                      'Description',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(description, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textPrimary)),
-                  // DEBUG BUTTON: Test /contraventions/debug/whoami
-                  SizedBox(height: 16),
+                    Text(
+                      description,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    // DEBUG BUTTON: Test /contraventions/debug/whoami
+                    SizedBox(height: 16),
                     // ElevatedButton(
                     //   onPressed: () => testWhoAmI(context),
                     //   child: Text('Test WHOAMI (debug)'),
                     // ),
-                    const SizedBox(height: 12),
-                    Divider(color: AppTheme.borderColor.withOpacity(0.6)),
-                    const SizedBox(height: 6),
-                    Text('${mediaUrls.length} preuves attachées', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                    if (mediaUrls.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Divider(color: AppTheme.borderColor.withOpacity(0.6)),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${mediaUrls.length} preuves attachées',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              if (mediaUrls.isNotEmpty) ...[
+                const SizedBox(height: 20),
 
-              // Thumbnails
-              SizedBox(
-                height: 110,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: mediaUrls.isEmpty ? 3 : mediaUrls.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
-                  itemBuilder: (context, index) {
-                    final url = mediaUrls.isEmpty
-                        ? 'https://picsum.photos/seed/${index + 1}/200/200'
-                        : mediaUrls[index];
-                    return _buildThumbnail(context, url, index == 0);
-                  },
+                // Thumbnails
+                SizedBox(
+                  height: 110,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: mediaUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 14),
+                    itemBuilder: (context, index) {
+                      final url = mediaUrls[index];
+                      return _buildThumbnail(context, url, index == 0);
+                    },
+                  ),
                 ),
-              ),
+              ],
 
               const Spacer(),
 
@@ -131,15 +159,21 @@ class InfractionConfirmationScreen extends ConsumerWidget {
                   try {
                     // Show a simple loading dialog
                     showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => const Center(child: CircularProgressIndicator()));
+                      context: context,
+                      barrierDismissible: false,
+                      builder:
+                          (_) =>
+                              const Center(child: CircularProgressIndicator()),
+                    );
 
                     await service.createContravention(
                       description: description,
                       typeLabel: motif,
                       userAuthorId: agentRowid,
-                      tiersId: resident == null ? null : int.tryParse(resident?.id ?? ''),
+                      tiersId:
+                          resident == null
+                              ? null
+                              : int.tryParse(resident?.id ?? ''),
                       mediaUrls: mediaUrls,
                     );
 
@@ -148,12 +182,21 @@ class InfractionConfirmationScreen extends ConsumerWidget {
                     // Invalidate history so dashboard refreshes
                     ref.invalidate(agentHistoryProvider(agentRowid));
 
-                    // Show success and pop back to previous screen
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Infraction créée')));
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    // Show success and navigate to home screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Infraction créée')),
+                    );
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const AgentHomeScreen(),
+                      ),
+                      (route) => false,
+                    );
                   } catch (e) {
                     Navigator.of(context).pop(); // remove loading
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
                   }
                 },
                 height: 64,
@@ -172,13 +215,21 @@ class InfractionConfirmationScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -193,15 +244,16 @@ class InfractionConfirmationScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
-        boxShadow: highlighted
-            ? [
-                BoxShadow(
-                  color: AppTheme.purpleAccent.withOpacity(0.35),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                )
-              ]
-            : [],
+        boxShadow:
+            highlighted
+                ? [
+                  BoxShadow(
+                    color: AppTheme.purpleAccent.withOpacity(0.35),
+                    blurRadius: 18,
+                    spreadRadius: 1,
+                  ),
+                ]
+                : [],
         border: Border.all(color: AppTheme.borderColor.withOpacity(0.7)),
       ),
     );
