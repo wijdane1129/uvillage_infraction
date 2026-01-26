@@ -1,56 +1,67 @@
-// Fichier : src/main/java/com/uvillage/infractions/service/ContraventionService.java
 package com.uvillage.infractions.service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.uvillage.infractions.dto.ContraventionDTO;
+import com.uvillage.infractions.dto.CreateContraventionRequest;
+import com.uvillage.infractions.entity.Contravention;
+import com.uvillage.infractions.entity.ContraventionMedia;
+import com.uvillage.infractions.entity.Facture;
 import com.uvillage.infractions.repository.ContraventionRepository;
+import com.uvillage.infractions.repository.ContraventionTypeRepository;
+import com.uvillage.infractions.repository.FactureRepository;
+import com.uvillage.infractions.repository.ResidentRepository;
+import com.uvillage.infractions.repository.UserRepository;
+
+import java.io.IOException;
 
 @Service
 public class ContraventionService {
-    // ... (Reste de la classe)
 
-    
+    // ----- Repositories -----
     private final ContraventionRepository contraventionRepository;
+    private final FactureRepository factureRepository;
 
-    public ContraventionService(ContraventionRepository contraventionRepository) {
+    @Autowired
+    private InvoicePdfService invoicePdfService;
+
+    @Autowired
+    public ContraventionService(ContraventionRepository contraventionRepository,
+                                FactureRepository factureRepository) {
         this.contraventionRepository = contraventionRepository;
+        this.factureRepository = factureRepository;
     }
+
+    // -------------------- HISTORIQUE ET STATISTIQUES --------------------
 
     // Récupère l'historique des infractions de l'agent
     public List<ContraventionDTO> getInfractionsHistoryByAgent(Long agentRowid) {
         return contraventionRepository.findByUserAuthor_IdOrderByDateCreationDesc(agentRowid)
                 .stream()
-                .map(ContraventionDTO::fromEntity) // Assurez-vous d'avoir adapté ContraventionDTO
+                .map(ContraventionDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
     // Calcule les statistiques Jour/Semaine
     public Map<String, Integer> getInfractionStatsForAgent(Long agentRowid) {
         LocalDate today = LocalDate.now();
-        // Debug: log the agentRowid and today value
-        System.out.println("[DEBUG] Stats calculation for agentRowid=" + agentRowid + ", today=" + today);
-
-        // Définition de la semaine (Lundi à Dimanche)
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
 
-        // Debug: log week range
-        System.out.println("[DEBUG] Week range: " + startOfWeek + " to " + endOfWeek);
-
         int todayCount = (int) contraventionRepository.countByUserAuthor_IdAndDateCreation(agentRowid, today);
         int weekCount = (int) contraventionRepository.countByUserAuthor_IdAndDateCreationBetween(agentRowid, startOfWeek, endOfWeek);
-
-        // Debug: log query results
-        System.out.println("[DEBUG] todayCount=" + todayCount + ", weekCount=" + weekCount);
 
         Map<String, Integer> stats = new HashMap<>();
         stats.put("todayCount", todayCount);
@@ -58,48 +69,109 @@ public class ContraventionService {
         return stats;
     }
 
-    // Create a new contravention from a simple request payload
-    public ContraventionDTO createContravention(com.uvillage.infractions.dto.CreateContraventionRequest req,
-                                               com.uvillage.infractions.repository.UserRepository userRepository,
-                                               com.uvillage.infractions.repository.ContraventionTypeRepository typeRepo,
-                                               com.uvillage.infractions.repository.ResidentRepository residentRepository,
-                                               com.uvillage.infractions.repository.ContraventionRepository contraventionRepository) {
+    // -------------------- CONTRAVENTION CRUD --------------------
 
-        // Basic validation
+    // Crée une nouvelle contravention
+    public ContraventionDTO createContravention(CreateContraventionRequest req,
+                                               UserRepository userRepository,
+                                               ContraventionTypeRepository typeRepo,
+                                               ResidentRepository residentRepository,
+                                               ContraventionRepository contraventionRepo) {
         if (req == null) throw new IllegalArgumentException("Request null");
 
-        final com.uvillage.infractions.entity.Contravention c = new com.uvillage.infractions.entity.Contravention();
+        Contravention c = new Contravention();
         c.setDescription(req.getDescription());
-        c.setDateCreation(java.time.LocalDate.now());
+        c.setDateCreation(LocalDate.now());
         c.setRef("CV-" + System.currentTimeMillis());
 
-        // userAuthor
         if (req.getUserAuthorId() != null) {
             userRepository.findById(req.getUserAuthorId()).ifPresent(c::setUserAuthor);
         }
 
-        // type (validation explicite)
         if (req.getTypeLabel() != null && !req.getTypeLabel().isEmpty()) {
             var typeOpt = typeRepo.findByLabel(req.getTypeLabel());
             if (typeOpt.isPresent()) {
                 c.setTypeContravention(typeOpt.get());
             } else {
-                throw new IllegalArgumentException("Type d'infraction inconnu: '" + req.getTypeLabel() + "'. Vérifiez le label envoyé.");
+                throw new IllegalArgumentException("Type d'infraction inconnu: '" + req.getTypeLabel() + "'");
             }
         } else {
             throw new IllegalArgumentException("Le champ typeLabel est obligatoire.");
         }
 
-        // tiers/resident
         if (req.getTiersId() != null) {
             residentRepository.findById(req.getTiersId()).ifPresent(c::setTiers);
         }
 
-        // Save contravention (cascade will handle media if provided later)
-        final com.uvillage.infractions.entity.Contravention saved = contraventionRepository.save(c);
-
+        Contravention saved = contraventionRepo.save(c);
         return ContraventionDTO.fromEntity(saved);
     }
 
-        // (Removed invalid Dart/Flutter code accidentally pasted here)
+    // Récupère une contravention par sa référence (DTO avec médias)
+    public ContraventionDTO getByRef(String ref) {
+        Contravention c = contraventionRepository.findByRef(ref).orElse(null);
+        if (c == null) return null;
+
+        List<String> media = (c.getMedia() == null) ? List.of() : c.getMedia().stream()
+                .map(ContraventionMedia::getMediaUrl)
+                .collect(Collectors.toList());
+
+        String userAuthor = "";
+        if (c.getUserAuthor() != null) {
+            userAuthor = (c.getUserAuthor().getFullName() != null && !c.getUserAuthor().getFullName().isEmpty())
+                    ? c.getUserAuthor().getFullName()
+                    : c.getUserAuthor().getUsername();
+        }
+
+        return ContraventionDTO.builder()
+                .ref(c.getRef())
+                .rowid(c.getRowid())
+                .status(c.getStatut() != null ? c.getStatut().name() : "")
+                .dateTime(c.getDateCreation() != null ? c.getDateCreation().toString() : "")
+                .motif(c.getTypeContravention() != null ? c.getTypeContravention().getLabel() : "")
+                .tiers(c.getTiers() != null ? c.getTiers().toString() : "")
+                .userAuthor(userAuthor)
+                .description(c.getDescription())
+                .media(media)
+                .build();
+    }
+
+    // -------------------- CONFIRMATION ET FACTURE --------------------
+
+    /**
+     * Confirme une contravention et génère une facture PDF
+     * @param ref La référence de la contravention
+     * @return La contravention mise à jour avec l'URL du PDF
+     * @throws IOException En cas d'erreur lors de la génération du PDF
+     */
+    @Transactional
+    public ContraventionDTO confirmContravention(String ref) throws IOException {
+        Contravention contravention = contraventionRepository.findByRef(ref)
+                .orElseThrow(() -> new RuntimeException("Contravention non trouvée: " + ref));
+
+        contravention.setStatut(Contravention.Status.ACCEPTEE);
+
+        // Générer le PDF
+        String pdfUrl = invoicePdfService.generateInvoicePdf(contravention);
+
+        // Créer et sauvegarder la facture
+        Facture facture = Facture.builder()
+                .refFacture("FAC-" + contravention.getRef() + "-" + UUID.randomUUID().toString().substring(0, 8))
+                .resident(contravention.getTiers())
+                .dateCreation(LocalDateTime.now())
+                .montantTotal(contravention.getTypeContravention() != null
+                        ? contravention.getTypeContravention().getMontant1()
+                        : 0.0)
+                .statut(Facture.Status.IMPAYE)
+                .pdfUrl(pdfUrl)
+                .build();
+
+        Facture savedFacture = factureRepository.save(facture);
+
+        // Associer la facture à la contravention
+        contravention.setFacture(savedFacture);
+        contraventionRepository.save(contravention);
+
+        return getByRef(ref);
+    }
 }

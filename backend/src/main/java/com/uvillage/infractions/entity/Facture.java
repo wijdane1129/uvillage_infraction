@@ -16,7 +16,7 @@ public class Facture {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name="fk_resident", nullable=false)
+    @JoinColumn(name="fk_resident", nullable=true)
     private Resident resident;
 
     @Column(name="date_creation", nullable=false)

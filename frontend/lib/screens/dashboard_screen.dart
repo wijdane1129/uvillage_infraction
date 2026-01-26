@@ -5,22 +5,50 @@ import '../providers/dashboard_provider.dart';
 import '../config/app_theme.dart';
 import '../models/dashboard_models.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<DashboardProvider>(context, listen: false);
       if (provider.state == DashboardState.loading) {
         provider.fetchStats();
       }
+      // Start auto-refresh every 30 seconds
+      provider.startAutoRefresh();
     });
+  }
 
+  @override
+  void dispose() {
+    final provider = Provider.of<DashboardProvider>(context, listen: false);
+    provider.stopAutoRefresh();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard Contraventions'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: AppTheme.textPrimary),
+            onPressed: () {
+              final provider = Provider.of<DashboardProvider>(
+                context,
+                listen: false,
+              );
+              provider.refreshData();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
             onPressed: () => Navigator.of(context).pop(),

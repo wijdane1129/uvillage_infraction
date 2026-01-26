@@ -37,12 +37,75 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http, PasswordEncoder passwordEncoder) throws Exception {
+    public AuthenticationManager authenticationManager(
+            HttpSecurity http,
+            PasswordEncoder passwordEncoder
+    ) throws Exception {
         return http.getSharedObject(AuthenticationManagerBuilder.class)
                 .userDetailsService(userDetailsService)
                 .passwordEncoder(passwordEncoder)
                 .and()
                 .build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            AuthenticationProvider authenticationProvider
+    ) throws Exception {
+
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .exceptionHandling(handling -> handling
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json");
+                    response.setStatus(401);
+                    response.getWriter().write(
+                        "{\"error\":\"Unauthorized\",\"message\":\"" +
+                        authException.getMessage() + "\"}"
+                    );
+                })
+            )
+            .sessionManagement(management ->
+                management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .authorizeHttpRequests(requests -> requests
+                // CORS preflight
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // Auth endpoints (public)
+                .requestMatchers(
+                    "/api/auth/**",
+                    "/api/v1/auth/**"
+                ).permitAll()
+
+                // Dashboard & config (dev / frontend needs)
+                .requestMatchers(
+                    "/api/dashboard/stats",
+                    "/api/dashboard/responsable",
+                    "/api/motifs/**"
+                ).permitAll()
+
+                // Contravention endpoints
+                .requestMatchers(HttpMethod.GET, "/api/v1/contraventions/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/contraventions/**").authenticated()
+
+                // Swagger
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                // Everything else
+                .anyRequest().authenticated()
+            )
+            .authenticationProvider(authenticationProvider)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
@@ -53,52 +116,20 @@ public class SecurityConfig {
             "http://localhost:*",
             "http://127.0.0.1:*"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*", "Authorization", "Content-Type", "Origin", "Accept"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization", "Content-Type"
+        ));
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization", "Content-Type"
+        ));
         configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationProvider authenticationProvider) throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .exceptionHandling(handling -> handling
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setContentType("application/json");
-                    response.setStatus(401);
-                    response.getWriter().write("{\"error\":\"Unauthorized\", \"message\":\"" + authException.getMessage() + "\"}");
-                }))
-            .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(requests -> requests
-                // Allow CORS preflight requests
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Public auth endpoints (login, registration, password reset flows)
-                .requestMatchers(
-                    "/api/auth/login", "/api/auth/sign-up", "/api/auth/forgot-password", 
-                    "/api/auth/reset-password", "/api/auth/verify-code", "/api/auth/verify-reset-code", 
-                    "/api/auth/resend-code", "/api/auth/debug/**",
-                    "/api/v1/auth/login", "/api/v1/auth/sign-up", "/api/v1/auth/forgot-password",
-                    "/api/v1/auth/reset-password", "/api/v1/auth/verify-code", "/api/v1/auth/verify-reset-code",
-                    "/api/v1/auth/resend-code"
-                ).permitAll()
-                // All other /api/auth/** endpoints require authentication
-                .requestMatchers("/api/auth/**", "/api/v1/auth/**").authenticated()
-                // Swagger/OpenAPI
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // Optional dev or dashboard endpoints
-                .requestMatchers("/api/dev/**", "/api/dashboard/stats").permitAll()
-                // All other requests require authentication
-                .anyRequest().authenticated()
-            )
-            .authenticationProvider(authenticationProvider)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
     }
 }

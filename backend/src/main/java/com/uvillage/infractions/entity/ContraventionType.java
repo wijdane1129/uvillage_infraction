@@ -2,6 +2,7 @@ package com.uvillage.infractions.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name="contravention_types")
@@ -30,6 +31,16 @@ public class ContraventionType {
 
     @Column(nullable=false)
     private Double montant4; 
+
+    @Column(name = "date_creation")
+    private LocalDateTime dateCreation;
+
+    @PrePersist
+    protected void onCreate() {
+        if (dateCreation == null) {
+            dateCreation = LocalDateTime.now();
+        }
+    }
 
     @OneToMany(mappedBy="typeContravention")
     private List<Contravention> contraventions;

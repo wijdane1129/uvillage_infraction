@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../services/api_service.dart';
 import '../models/dashboard_models.dart';
 import '../config/api_config.dart';
@@ -10,6 +11,7 @@ class DashboardProvider extends ChangeNotifier {
   DashboardStats? _stats;
   DashboardState _state = DashboardState.loading;
   String _errorMessage = '';
+  Timer? _refreshTimer;
 
   DashboardStats? get stats => _stats;
   DashboardState get state => _state;
@@ -71,5 +73,30 @@ class DashboardProvider extends ChangeNotifier {
     } finally {
       notifyListeners();
     }
+  }
+
+  /// Start auto-refresh of dashboard stats every 30 seconds
+  void startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      await fetchStats();
+    });
+  }
+
+  /// Stop auto-refresh
+  void stopAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  /// Manual refresh method (can be called from UI)
+  Future<void> refreshData() async {
+    await fetchStats();
+  }
+
+  @override
+  void dispose() {
+    stopAutoRefresh();
+    super.dispose();
   }
 }

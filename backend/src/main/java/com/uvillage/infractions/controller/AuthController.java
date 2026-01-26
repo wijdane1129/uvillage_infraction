@@ -3,8 +3,8 @@ package com.uvillage.infractions.controller;
 import com.uvillage.infractions.dto.*;
 import com.uvillage.infractions.entity.User;
 import com.uvillage.infractions.repository.UserRepository;
-import com.uvillage.infractions.service.AuthService;
 import com.uvillage.infractions.security.JwtUtils;
+import com.uvillage.infractions.service.AuthService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,17 +35,19 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final UserRepository userRepository;
 
-    public AuthController(AuthService authService,
-                          AuthenticationManager authenticationManager,
-                          JwtUtils jwtUtils,
-                          UserRepository userRepository) {
+    public AuthController(
+            AuthService authService,
+            AuthenticationManager authenticationManager,
+            JwtUtils jwtUtils,
+            UserRepository userRepository
+    ) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userRepository = userRepository;
     }
 
-    // --- Registration ---
+    // ---------- Registration ----------
     @PostMapping("/sign-up")
     public ResponseEntity<?> signUp(@Valid @RequestBody CreateAccountRequest request) {
         try {
@@ -60,14 +62,17 @@ public class AuthController {
         }
     }
 
-    // --- Login ---
+    // ---------- Login ----------
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         logger.info("[AUTH] Attempting login for: {}", request.getEmail());
 
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
             );
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -76,7 +81,7 @@ public class AuthController {
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            String nomComplet = (user.getFullName() != null && !user.getFullName().isEmpty())
+            String nomComplet = (user.getFullName() != null && !user.getFullName().isBlank())
                     ? user.getFullName()
                     : user.getUsername();
 
@@ -94,31 +99,33 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (AuthenticationException e) {
-            logger.error("[AUTH] ❌ Login failed for: {} - Invalid credentials", request.getEmail());
-            return ResponseEntity.status(401).body("Invalid credentials");
+            logger.warn("[AUTH] ❌ Invalid credentials for: {}", request.getEmail());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(createErrorResponse("Invalid credentials"));
 
         } catch (Exception e) {
             logger.error("[AUTH] ❌ Internal error for: {}", request.getEmail(), e);
-            return ResponseEntity.status(500)
-                    .body("An internal error occurred. Please try again later.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("An internal error occurred"));
         }
     }
 
-    // --- Forgot Password ---
+    // ---------- Forgot Password ----------
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
             authService.forgotPassword(request);
-            return ResponseEntity.ok(createSuccessResponse(
-                    "If your email exists, you will receive reset instructions"));
+            return ResponseEntity.ok(
+                    createSuccessResponse("If your email exists, you will receive reset instructions")
+            );
         } catch (Exception ex) {
-            logger.error("Error during forgot password request for email={}", request.getEmail(), ex);
+            logger.error("Error during forgot password for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred"));
         }
     }
 
-    // --- Verify Email / Reset Codes ---
+    // ---------- Verify Codes ----------
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@Valid @RequestBody VerificationCodeRequest request) {
         try {
@@ -129,7 +136,7 @@ public class AuthController {
         } catch (Exception ex) {
             logger.error("Error verifying code for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("An error occurred during verification"));
+                    .body(createErrorResponse("Verification error"));
         }
     }
 
@@ -143,10 +150,11 @@ public class AuthController {
         } catch (Exception ex) {
             logger.error("Error verifying reset code for email={}", request.getEmail(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("An error occurred during reset code verification"));
+                    .body(createErrorResponse("Reset code verification failed"));
         }
     }
 
+    // ---------- Reset Password ----------
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
@@ -155,103 +163,118 @@ public class AuthController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
         } catch (Exception ex) {
-            logger.error("Error during password reset", ex);
+            logger.error("Error resetting password", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("An error occurred during password reset"));
+                    .body(createErrorResponse("Password reset failed"));
         }
     }
 
+    // ---------- Resend Code ----------
     @PostMapping("/resend-code")
-    public ResponseEntity<?> resendVerificationCode(@Valid @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> resendVerificationCode(@RequestBody Map<String, String> request) {
         try {
-            String email = request.get("email");
-            authService.resendVerificationCode(email);
-            return ResponseEntity.ok(createSuccessResponse("Verification code sent to your email"));
+            authService.resendVerificationCode(request.get("email"));
+            return ResponseEntity.ok(createSuccessResponse("Verification code sent"));
         } catch (Exception ex) {
-            logger.error("Error resending verification code for email={}", request.get("email"), ex);
+            logger.error("Error resending verification code", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("An error occurred"));
         }
     }
 
-    // --- Profile Management ---
-    @PutMapping("/edit-profile")
-    public ResponseEntity<?> editProfile(@Valid @RequestBody EditProfileRequest request) {
-        try {
-            AuthResponseDto response = authService.editProfile(request);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(createErrorResponse(ex.getMessage()));
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("An error occurred during profile update"));
-        }
-    }
-
-    @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request,
-                                            Principal principal,
-                                            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-        String email = null;
-
-        if (principal != null) email = principal.getName();
-        else if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            try {
-                String token = authorizationHeader.substring(7);
-                if (jwtUtils.validateToken(token)) email = jwtUtils.extractUsername(token);
-            } catch (Exception ex) {
-                logger.warn("Failed to extract username from Authorization header", ex);
-            }
-        } else if (request.getEmail() != null) email = request.getEmail();
-
-        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("success", false, "message", "Unauthenticated"));
-
-        boolean checkCurrent = request.getCurrentPassword() != null && !request.getCurrentPassword().isBlank();
-        AuthResponseDto resp = authService.changePasswordAuthenticated(email, request.getCurrentPassword(), checkCurrent, request.getNewPassword());
-
-        if (resp.isSuccess())
-            return ResponseEntity.ok(Map.of("success", true, "message", resp.getMessage(), "token", resp.getToken()));
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", resp.getMessage()));
-    }
-
+    // ---------- Profile ----------
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(Principal principal) {
         try {
-            if (principal == null || principal.getName() == null)
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(createErrorResponse("Unauthorized"));
+            if (principal == null || principal.getName() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorResponse("Unauthorized"));
+            }
 
             UserProfileDto profile = authService.getProfileByEmail(principal.getName());
-            if (profile == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(createErrorResponse("User not found"));
-
+            if (profile == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createErrorResponse("User not found"));
+            }
             return ResponseEntity.ok(profile);
-
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("An error occurred"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("An error occurred"));
         }
     }
 
-    // --------------------
-    // Debug endpoint: validate a token and return the subject (for local debugging only)
-    // Usage: send Authorization: Bearer <token>
+    // ---------- Change Password ----------
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Principal principal,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+
+        String email = principal != null ? principal.getName() : null;
+
+        if (email == null && authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                String token = authHeader.substring(7);
+                if (jwtUtils.validateToken(token)) {
+                    email = jwtUtils.extractUsername(token);
+                }
+            } catch (Exception ex) {
+                logger.warn("JWT extraction failed", ex);
+            }
+        }
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(createErrorResponse("Unauthenticated"));
+        }
+
+        boolean checkCurrent =
+                request.getCurrentPassword() != null && !request.getCurrentPassword().isBlank();
+
+        AuthResponseDto resp = authService.changePasswordAuthenticated(
+                email,
+                request.getCurrentPassword(),
+                checkCurrent,
+                request.getNewPassword()
+        );
+
+        if (resp.isSuccess()) {
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", resp.getMessage(),
+                    "token", resp.getToken()
+            ));
+        }
+
+        return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", resp.getMessage()
+        ));
+    }
+
+    // ---------- Debug ----------
     @GetMapping("/debug/token")
-    public ResponseEntity<?> debugToken(@RequestHeader(name = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<?> debugToken(
+            @RequestHeader(name = "Authorization", required = false) String authHeader
+    ) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest().body(Map.of("valid", false, "message", "No Bearer token provided"));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("valid", false, "message", "No Bearer token"));
         }
+
         String token = authHeader.substring(7);
-        boolean valid = false;
-        String username = null;
         try {
-            valid = jwtUtils.validateToken(token);
-            username = jwtUtils.extractUsername(token);
+            boolean valid = jwtUtils.validateToken(token);
+            String username = jwtUtils.extractUsername(token);
+            return ResponseEntity.ok(Map.of("valid", valid, "username", username));
         } catch (Exception ex) {
-            return ResponseEntity.status(401).body(Map.of("valid", false, "error", ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("valid", false, "error", ex.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("valid", valid, "username", username));
     }
 
-    // --- Helper Methods ---
+    // ---------- Helpers ----------
     private Map<String, Object> createErrorResponse(String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);

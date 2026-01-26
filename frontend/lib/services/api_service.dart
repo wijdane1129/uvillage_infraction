@@ -1,53 +1,45 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 import 'storage_service.dart';
+import 'api_client.dart';
 import '../models/dashboard_models.dart';
 import '../config/api_config.dart';
 // Removed dart:convert/http usage in favor of Dio which is already configured
 
 class ApiService {
-  final Dio _dio = Dio();
+  static final ApiService _instance = ApiService._internal();
+
   final Dio _crm_dio = Dio(); // Separate instance for CRM API
-  final String _baseUrl = const String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://localhost:8080/api',
-  );
   final _storage = StorageService();
 
-  ApiService() {
-    // Setup backend API
-    _dio.options.baseUrl = _baseUrl;
-    _dio.options.headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+  // Singleton factory
+  factory ApiService() {
+    return _instance;
+  }
 
+  /// Get base URL for public endpoints (without /v1)
+  static String get _baseUrl {
+    if (kIsWeb) {
+      return 'http://127.0.0.1:8080';
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:8080';
+    } else {
+      return 'http://localhost:8080';
+    }
+  }
+
+  ApiService._internal() {
     // Setup CRM API (when available)
     _crm_dio.options.baseUrl = ApiConfig.CRM_API_URL;
     _crm_dio.options.headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-
-    // Add interceptor for JWT token
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await _storage.getToken();
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          return handler.next(options);
-        },
-        onError: (DioException error, handler) {
-          if (error.response?.statusCode == 401) {
-            // Handle token expiration
-            _storage.deleteToken();
-          }
-          return handler.next(error);
-        },
-      ),
-    );
   }
+
+  /// Get authenticated Dio client from ApiClient
+  Dio get _dio => ApiClient.dio;
 
   Future<Response> post(String path, dynamic data) async {
     try {
@@ -66,30 +58,41 @@ class ApiService {
   }
 
   Exception _handleError(DioException e) {
+    print('API Error: ${e.toString()}');
+    print('API Error Response: ${e.response?.data}');
+    print('API Error Status Code: ${e.response?.statusCode}');
+
     if (e.response != null) {
       final data = e.response!.data;
-      return Exception(data['message'] ?? 'An error occurred');
+      if (data is Map) {
+        return Exception(
+          data['message'] ?? data.toString() ?? 'An error occurred',
+        );
+      } else if (data is String) {
+        return Exception(data);
+      }
+      return Exception(data.toString());
     }
-    return Exception('Network error occurred');
+    return Exception('Network error: ${e.message}');
   }
 
   Future<DashboardStats> fetchDashboardStats() async {
     try {
-      // Try CRM API first if configured (not mock mode)
-      if (!ApiConfig.USE_MOCK_DATA) {
-        try {
-          final response = await _crm_dio.get(ApiConfig.CRM_DASHBOARD_ENDPOINT);
-          if (response.statusCode == 200) {
-            return DashboardStats.fromJson(response.data);
-          }
-        } catch (e) {
-          // Fall back to backend if CRM API fails
-          print('CRM API failed, falling back to backend: $e');
-        }
-      }
+      // Dashboard endpoint is public and at /api/dashboard/stats (not /api/v1/dashboard/stats)
+      // Create a Dio instance that targets the correct base URL
+      final publicDio = Dio(
+        BaseOptions(
+          baseUrl: _baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
 
-      // Use backend API
-      final response = await _dio.get('/dashboard/stats');
+      final response = await publicDio.get('/api/dashboard/stats');
       if (response.statusCode == 200) {
         return DashboardStats.fromJson(response.data);
       }

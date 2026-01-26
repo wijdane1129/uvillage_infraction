@@ -1,13 +1,13 @@
 /// API Configuration
-/// Switch between mock data and real CRM API
+/// Switch between mock data and real backend API
 ///
-/// To use real API when available:
-/// 1. Change USE_MOCK_DATA to false
-/// 2. Update CRM_API_URL with the actual CRM endpoint
-/// 3. The dashboard provider will automatically use the real API
+/// To use real backend API:
+/// 1. Set USE_MOCK_DATA to false
+/// 2. Dashboard will automatically fetch from backend /api/dashboard/stats
 class ApiConfig {
-  /// Set to true to use mock data, false to use real CRM API
-  static const bool USE_MOCK_DATA = true;
+  /// Set to true to use mock data, false to use real backend API
+  /// Change this to false to fetch real data from the backend
+  static const bool USE_MOCK_DATA = false;
 
   /// CRM API Base URL - Update this when CRM API is available
   /// Example: 'http://192.168.1.100:3000' or 'https://crm.example.com'
@@ -28,6 +28,9 @@ class ApiConfig {
   /// Full backend dashboard URL
   static String get backendDashboardUrl =>
       '$BACKEND_API_URL$BACKEND_DASHBOARD_ENDPOINT';
+
+  /// Base URL for API (alias for BACKEND_API_URL)
+  static String get baseUrl => BACKEND_API_URL;
 
   /// Get the appropriate dashboard URL based on configuration
   static String getDashboardUrl() {

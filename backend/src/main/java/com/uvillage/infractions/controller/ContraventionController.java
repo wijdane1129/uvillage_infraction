@@ -1,28 +1,26 @@
 package com.uvillage.infractions.controller;
 
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.uvillage.infractions.dto.ContraventionDTO;
 import com.uvillage.infractions.dto.CreateContraventionRequest;
+import com.uvillage.infractions.repository.*;
 import com.uvillage.infractions.service.ContraventionService;
-import com.uvillage.infractions.repository.UserRepository;
-import com.uvillage.infractions.repository.ContraventionTypeRepository;
-import com.uvillage.infractions.repository.ResidentRepository;
-import com.uvillage.infractions.repository.ContraventionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+import java.security.Principal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/contraventions")
 public class ContraventionController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ContraventionController.class);
 
     private final ContraventionService contraventionService;
     private final UserRepository userRepository;
@@ -30,11 +28,13 @@ public class ContraventionController {
     private final ResidentRepository residentRepository;
     private final ContraventionRepository contraventionRepository;
 
-    public ContraventionController(ContraventionService contraventionService,
-                                  UserRepository userRepository,
-                                  ContraventionTypeRepository typeRepo,
-                                  ResidentRepository residentRepository,
-                                  ContraventionRepository contraventionRepository) {
+    public ContraventionController(
+            ContraventionService contraventionService,
+            UserRepository userRepository,
+            ContraventionTypeRepository typeRepo,
+            ResidentRepository residentRepository,
+            ContraventionRepository contraventionRepository
+    ) {
         this.contraventionService = contraventionService;
         this.userRepository = userRepository;
         this.typeRepo = typeRepo;
@@ -42,50 +42,97 @@ public class ContraventionController {
         this.contraventionRepository = contraventionRepository;
     }
 
-    // Endpoint pour l'historique : GET /api/v1/contraventions/history/{agentRowid}
+    // ---------- History ----------
     @GetMapping("/history/{agentRowid}")
     public ResponseEntity<List<ContraventionDTO>> getInfractionsHistoryByAgent(@PathVariable Long agentRowid) {
         List<ContraventionDTO> infractions = contraventionService.getInfractionsHistoryByAgent(agentRowid);
         return ResponseEntity.ok(infractions);
     }
 
-    // Endpoint pour les statistiques : GET /api/v1/contraventions/stats/{agentRowid}
+    // ---------- Stats ----------
     @GetMapping("/stats/{agentRowid}")
     public ResponseEntity<Map<String, Integer>> getInfractionStatsForAgent(@PathVariable Long agentRowid) {
         Map<String, Integer> stats = contraventionService.getInfractionStatsForAgent(agentRowid);
         return ResponseEntity.ok(stats);
     }
 
-    // Create a new contravention
+    // ---------- Create ----------
     @PostMapping
     public ResponseEntity<ContraventionDTO> createContravention(@RequestBody CreateContraventionRequest req) {
-        ContraventionDTO created = contraventionService.createContravention(req, this.userRepository, this.typeRepo,
-                this.residentRepository, this.contraventionRepository);
-        // Build location URI for created resource (use its rowid if available)
-        // ContraventionDTO does not expose the numeric rowid; use the reference instead
+        ContraventionDTO created = contraventionService.createContravention(
+                req, this.userRepository, this.typeRepo,
+                this.residentRepository, this.contraventionRepository
+        );
+
         URI location = URI.create("/api/v1/contraventions/ref/" + (created != null ? created.getRef() : ""));
         return ResponseEntity.created(location).body(created);
     }
 
-    // Endpoint pour obtenir tous les labels de types d'infraction
+    // ---------- Get by reference ----------
+    @GetMapping("/ref/{ref}")
+    public ResponseEntity<?> getByRef(@PathVariable String ref) {
+        try {
+            ContraventionDTO dto = contraventionService.getByRef(ref);
+            if (dto == null) return ResponseEntity.notFound().build();
+            return ResponseEntity.ok(dto);
+        } catch (Exception ex) {
+            logger.error("Error fetching contravention {}", ref, ex);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Internal error"));
+        }
+    }
+
+    // ---------- Confirm contravention ----------
+    @PostMapping("/ref/{ref}/confirm")
+    public ResponseEntity<?> confirmContravention(@PathVariable String ref) {
+        try {
+            logger.info("Confirming contravention with ref: {}", ref);
+            ContraventionDTO dto = contraventionService.confirmContravention(ref);
+            logger.info("Contravention {} confirmed successfully", ref);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Contravention confirmée et facture générée");
+            response.put("contravention", dto);
+
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException ex) {
+            logger.error("Contravention not found: {}", ref, ex);
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "Contravention non trouvée: " + ex.getMessage()
+            ));
+        } catch (Exception ex) {
+            logger.error("Error confirming contravention {}", ref, ex);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Erreur lors de la confirmation: " + ex.getClass().getSimpleName() + " - " + ex.getMessage()
+            ));
+        }
+    }
+
+    // ---------- Contravention types ----------
     @GetMapping("/types")
     public ResponseEntity<List<String>> getAllContraventionTypeLabels() {
         List<String> labels = typeRepo.findAll()
-            .stream()
-            .map(type -> type.getLabel())
-            .collect(java.util.stream.Collectors.toList());
+                .stream()
+                .map(type -> type.getLabel())
+                .collect(Collectors.toList());
         return ResponseEntity.ok(labels);
     }
 
-    // Debug: returns the authenticated principal and authorities for this path
+    // ---------- Debug ----------
     @GetMapping("/debug/whoami")
-    public ResponseEntity<?> whoAmI(java.security.Principal principal) {
+    public ResponseEntity<?> whoAmI(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("authenticated", false));
         }
-        // Include authorities if available
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Object authorities = auth != null ? auth.getAuthorities() : null;
-        return ResponseEntity.ok(Map.of("authenticated", true, "principal", principal.getName(), "authorities", authorities));
+        return ResponseEntity.ok(Map.of(
+                "authenticated", true,
+                "principal", principal.getName(),
+                "authorities", authorities
+        ));
     }
 }

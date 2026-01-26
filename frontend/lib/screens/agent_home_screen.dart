@@ -14,12 +14,33 @@ import 'User_profile.dart';
 // to prevent the earlier compiler/resolution issue. A local copy of the
 // screen and small helper widgets are provided below.
 
-// L'écran doit être un ConsumerWidget pour utiliser Riverpod
-class AgentHomeScreen extends ConsumerWidget {
+// L'écran doit être un ConsumerStatefulWidget pour utiliser Riverpod avec lifecycle
+class AgentHomeScreen extends ConsumerStatefulWidget {
   const AgentHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AgentHomeScreen> createState() => _AgentHomeScreenState();
+}
+
+class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Start auto-refresh of history and stats every 15 seconds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(historyRefreshControllerProvider.notifier).startAutoRefresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Stop auto-refresh when leaving the screen
+    ref.read(historyRefreshControllerProvider.notifier).stopAutoRefresh();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Dans le Widget build de AgentHomeScreen
 
     // 💡 L'appel est correct car agentNameProvider retourne un String
@@ -220,7 +241,6 @@ PreferredSizeWidget _buildAppBar(String agentName, BuildContext context) {
         ),
       ],
     ),
-    
   );
 }
 
@@ -400,9 +420,9 @@ class AgentBottomNavBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildNavItem(context, Icons.home, 'Home', 0, currentIndex),
-           
+
             const SizedBox(width: 60),
-            
+
             _buildNavItem(context, Icons.person, 'Profil', 3, currentIndex),
           ],
         ),
@@ -652,9 +672,11 @@ class _AgentInfractionScreenLocalState
               ),
               child: motifsAsync.when(
                 data: (motifs) {
-                  final uniqueMotifs = motifs.toSet().where((e) => e.trim().isNotEmpty).toList();
+                  final uniqueMotifs =
+                      motifs.toSet().where((e) => e.trim().isNotEmpty).toList();
                   String? motifValue = selectedMotif;
-                  if (motifValue == null || !uniqueMotifs.contains(motifValue)) {
+                  if (motifValue == null ||
+                      !uniqueMotifs.contains(motifValue)) {
                     motifValue = null;
                   }
                   return CustomDropdownField(
@@ -790,11 +812,15 @@ class _AgentInfractionScreenLocalState
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(20.0),
         child: GradientButton(
-            onPressed: () {
+          onPressed: () {
             // Require motif selection before navigating to step 2
             if (selectedMotif == null || selectedMotif!.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Le choix du motif est obligatoire pour continuer')),
+                const SnackBar(
+                  content: Text(
+                    'Le choix du motif est obligatoire pour continuer',
+                  ),
+                ),
               );
               return;
             }
@@ -804,10 +830,11 @@ class _AgentInfractionScreenLocalState
               context,
               MaterialPageRoute(
                 // La destination est la page de connexion
-                builder: (context) => ContraventionStep2Screen(
-                  motif: selectedMotif,
-                  resident: foundResident,
-                ),
+                builder:
+                    (context) => ContraventionStep2Screen(
+                      motif: selectedMotif,
+                      resident: foundResident,
+                    ),
               ),
             );
           },

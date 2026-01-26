@@ -6,6 +6,7 @@ import java.util.List;
 @Entity
 @Table(name = "residents")
 public class Resident {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,6 +37,8 @@ public class Resident {
 
     public Resident() {
     }
+
+    // Getters & Setters
 
     public Long getId() {
         return id;
@@ -107,5 +110,10 @@ public class Resident {
 
     public void setRecidives(List<Recidive> recidives) {
         this.recidives = recidives;
+    }
+
+    // Helper method
+    public String getNomResident() {
+        return prenom != null ? prenom + " " + nom : nom;
     }
 }

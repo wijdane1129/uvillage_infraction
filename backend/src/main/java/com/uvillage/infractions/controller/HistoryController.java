@@ -38,9 +38,30 @@ public class HistoryController {
         // 2. Logique Métier (Données simulées)
         // TODO: Implémenter la récupération réelle de l'historique
         List<Map<String, Object>> mockHistory = List.of(
-            Map.of("id", 1, "motif", "Bruit", "statut", "Sous vérification", "date", "14/03/24 22:30"),
-            Map.of("id", 2, "motif", "Dégradation", "statut", "Accepté", "date", "13/03/24 18:00"),
-            Map.of("id", 3, "motif", "Stationnement", "statut", "Classé", "date", "12/03/24 09:15")
+            Map.ofEntries(
+                Map.entry("ref", "REF-001"),
+                Map.entry("statut", "SOUS_VERIFICATION"),
+                Map.entry("dateHeure", "14/03/24 22:30"),
+                Map.entry("typeContravention", Map.of("label", "Bruit")),
+                Map.entry("userAuthor", Map.of("prenom", "Jean", "nom", "Dupont")),
+                Map.entry("tiers", Map.of("prenom", "Marie", "nom", "Martin"))
+            ),
+            Map.ofEntries(
+                Map.entry("ref", "REF-002"),
+                Map.entry("statut", "ACCEPTEE"),
+                Map.entry("dateHeure", "13/03/24 18:00"),
+                Map.entry("typeContravention", Map.of("label", "Dégradation")),
+                Map.entry("userAuthor", Map.of("prenom", "Pierre", "nom", "Bernard")),
+                Map.entry("tiers", Map.of("prenom", "Sophie", "nom", "Leclerc"))
+            ),
+            Map.ofEntries(
+                Map.entry("ref", "REF-003"),
+                Map.entry("statut", "CLASSEE_SANS_SUITE"),
+                Map.entry("dateHeure", "12/03/24 09:15"),
+                Map.entry("typeContravention", Map.of("label", "Stationnement")),
+                Map.entry("userAuthor", Map.of("prenom", "Claire", "nom", "Robert")),
+                Map.entry("tiers", Map.of("prenom", "Luc", "nom", "Garcia"))
+            )
         );
 
         return ResponseEntity.ok(mockHistory);

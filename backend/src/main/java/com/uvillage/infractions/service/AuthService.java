@@ -120,8 +120,8 @@ public class AuthService {
         }
 
         // clear old tokens
-        user.setResetToken(null);
-        user.setResetTokenExpiry(null);
+        user.setResetPasswordToken(null);
+        user.setResetTokenExpiryDate(null);
 
         String resetCode = generateVerificationCode();
         user.setResetPasswordToken(resetCode);
@@ -264,7 +264,7 @@ public class AuthService {
         if (user == null) return AuthResponseDto.fail("User not found");
 
         if (checkCurrent) {
-            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
                 return AuthResponseDto.fail("Current password incorrect");
             }
         }
