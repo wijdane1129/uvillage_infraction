@@ -31,18 +31,25 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final Pattern responsiblePattern;
 
     @Autowired
     public AuthService(AuthenticationManager authenticationManager,
                        JwtUtils jwtUtils,
                        UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       @org.springframework.beans.factory.annotation.Value("${app.responsible.pattern:}") String responsiblePattern) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        if (responsiblePattern != null && !responsiblePattern.isBlank()) {
+            this.responsiblePattern = Pattern.compile(responsiblePattern, Pattern.CASE_INSENSITIVE);
+        } else {
+            this.responsiblePattern = null;
+        }
     }
 
     // --------------------
@@ -59,11 +66,19 @@ public class AuthService {
 
         validatePassword(request.getPassword());
 
+        // Assign role based on configured responsible email pattern; default to AGENT
+        String normalizedEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        boolean isResponsible = false;
+        if (responsiblePattern != null) {
+            isResponsible = responsiblePattern.matcher(normalizedEmail).matches();
+        }
+
         User user = User.builder()
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .username(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .role(isResponsible ? User.Role.RESPONSABLE : User.Role.AGENT)
                 .build();
 
         User savedUser = userRepository.save(user);

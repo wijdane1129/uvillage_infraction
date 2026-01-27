@@ -87,6 +87,18 @@ class AuthService {
 
       if (loginResponse.token.isNotEmpty) {
         await _saveToken(loginResponse.token);
+        // Persist role for frontend routing / UI access control
+        final authBox = Hive.isBoxOpen(_authBoxName)
+            ? Hive.box(_authBoxName)
+            : await Hive.openBox(_authBoxName);
+        if (loginResponse.role != null) {
+          await authBox.put('role', loginResponse.role);
+        }
+        // Also save to secure storage for other services that read from it
+        try {
+          final storage = StorageService();
+          await storage.saveToken(loginResponse.token);
+        } catch (_) {}
       }
       return loginResponse;
     } on DioException catch (e) {
@@ -102,6 +114,12 @@ class AuthService {
         : await Hive.openBox(_authBoxName);
     await authBox.put('jwt_token', token);
     if (kDebugMode) print('🔒 [AUTH] Token sauvegardé dans Hive');
+    // Temporary: print full token in debug to allow manual curl testing
+    if (kDebugMode) {
+      try {
+        print('🔐 [AUTH DEBUG] Full token: $token');
+      } catch (_) {}
+    }
   }
 
   static Future<String?> getToken() async {

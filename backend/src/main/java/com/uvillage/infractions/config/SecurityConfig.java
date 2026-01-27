@@ -85,16 +85,23 @@ public class SecurityConfig {
                     "/api/v1/auth/**"
                 ).permitAll()
 
-                // Dashboard & config (dev / frontend needs)
-                .requestMatchers(
-                    "/api/dashboard/stats",
-                    "/api/dashboard/responsable",
-                    "/api/motifs/**"
-                ).permitAll()
+                // Dashboard & config
+                // - dashboard stats: accessible to authenticated users
+                .requestMatchers("/api/dashboard/stats").authenticated()
+                // - dashboard responsable: only responsable role
+                .requestMatchers("/api/dashboard/responsable").hasRole("RESPONSABLE")
+                // Motifs: allow GET for authenticated users, restrict modifications to responsable
+                .requestMatchers(HttpMethod.GET, "/api/motifs/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/motifs/**").hasRole("RESPONSABLE")
+                .requestMatchers(HttpMethod.PUT, "/api/motifs/**").hasRole("RESPONSABLE")
+                .requestMatchers(HttpMethod.DELETE, "/api/motifs/**").hasRole("RESPONSABLE")
 
                 // Contravention endpoints
                 .requestMatchers(HttpMethod.GET, "/api/v1/contraventions/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/v1/contraventions/**").authenticated()
+                // Creating contraventions allowed for authenticated (agents)
+                .requestMatchers(HttpMethod.POST, "/api/v1/contraventions").authenticated()
+                // Confirming a contravention (invoice generation) reserved to responsable
+                .requestMatchers(HttpMethod.POST, "/api/v1/contraventions/ref/**/confirm").hasRole("RESPONSABLE")
 
                 // Swagger
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

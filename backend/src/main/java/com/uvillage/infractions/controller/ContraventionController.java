@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.net.URI;
 import java.security.Principal;
@@ -83,6 +84,7 @@ public class ContraventionController {
 
     // ---------- Confirm contravention ----------
     @PostMapping("/ref/{ref}/confirm")
+    @PreAuthorize("hasRole('RESPONSABLE')")
     public ResponseEntity<?> confirmContravention(@PathVariable String ref) {
         try {
             logger.info("Confirming contravention with ref: {}", ref);
@@ -134,5 +136,19 @@ public class ContraventionController {
                 "principal", principal.getName(),
                 "authorities", authorities
         ));
+    }
+
+    // ---------- By resident ----------
+    @GetMapping("/resident/{residentId}")
+    public ResponseEntity<List<ContraventionDTO>> getContraventionsByResident(@PathVariable Long residentId) {
+        logger.info("🎯 [RESIDENT] Endpoint called for resident ID: {}", residentId);
+        try {
+            List<ContraventionDTO> dtos = contraventionService.getContraventionsByResident(residentId);
+            logger.info("✅ [RESIDENT] Returning {} contraventions for resident {}", dtos.size(), residentId);
+            return ResponseEntity.ok(dtos);
+        } catch (Exception ex) {
+            logger.error("Error fetching contraventions for resident {}", residentId, ex);
+            return ResponseEntity.status(500).build();
+        }
     }
 }

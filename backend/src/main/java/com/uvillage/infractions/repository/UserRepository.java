@@ -24,6 +24,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     /**
+     * Case-insensitive lookup by email. Useful to avoid authentication failures
+     * when email case normalization differs between token subject and stored value.
+     */
+    Optional<User> findByEmailIgnoreCase(String email);
+
+    /**
      * Find a user by their reset password token.
      */
     Optional<User> findByResetPasswordToken(String token);

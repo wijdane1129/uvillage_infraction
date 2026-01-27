@@ -1,8 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'dart:io' show Platform;
 import 'storage_service.dart';
 import 'api_client.dart';
+import 'auth_service.dart';
 import '../models/dashboard_models.dart';
 import '../config/api_config.dart';
 // Removed dart:convert/http usage in favor of Dio which is already configured
@@ -51,6 +52,36 @@ class ApiService {
 
   Future<Response> get(String path) async {
     try {
+      // Special-case dashboard endpoints which in backend are under `/api/dashboard` (no /v1)
+      if (path.startsWith('/dashboard')) {
+        // Try secure storage first, then Hive (AuthService.getToken)
+        String? token = await _storage.getToken();
+        if (token == null || token.isEmpty) {
+          try {
+            token = await AuthService.getToken();
+            if (token != null && token.isNotEmpty && kDebugMode) {
+              print('🔑 [API SERVICE] Fallback token from Hive used for dashboard');
+            }
+          } catch (_) {}
+        } else {
+          if (kDebugMode) print('🔑 [API SERVICE] Token from secure storage used for dashboard');
+        }
+
+        final client = Dio(BaseOptions(
+          baseUrl: _baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+        ));
+
+        if (kDebugMode) print('📤 [API SERVICE] GET -> ${client.options.baseUrl}/api$path (with auth=${token!=null})');
+        return await client.get('/api$path');
+      }
+
       return await _dio.get(path);
     } on DioException catch (e) {
       throw _handleError(e);

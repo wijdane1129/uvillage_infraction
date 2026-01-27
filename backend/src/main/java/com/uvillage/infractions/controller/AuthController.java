@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.util.stream.Collectors;
 
 /**
  * REST controller for authentication and profile management.
@@ -273,6 +275,29 @@ public class AuthController {
                     .body(Map.of("valid", false, "error", ex.getMessage()));
         }
     }
+
+        /**
+         * Debug endpoint that returns the current SecurityContext authentication
+         * information (principal name and granted authorities). Useful to verify
+         * whether the JWT filter set the Authentication for the incoming request.
+         */
+        @GetMapping("/debug/whoami")
+        public ResponseEntity<?> debugWhoAmI() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("authenticated", false));
+        }
+
+        var authorities = auth.getAuthorities() == null ? java.util.List.of() :
+            auth.getAuthorities().stream().map(Object::toString).collect(Collectors.toList());
+
+        return ResponseEntity.ok(Map.of(
+            "authenticated", auth.isAuthenticated(),
+            "principal", auth.getName(),
+            "authorities", authorities
+        ));
+        }
 
     // ---------- Helpers ----------
     private Map<String, Object> createErrorResponse(String message) {

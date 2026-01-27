@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +62,7 @@ public class ContraventionTypeController {
      * Créer un nouveau motif
      */
     @PostMapping
+    @PreAuthorize("hasRole('RESPONSABLE')")
     public ResponseEntity<ContraventionTypeDTO> createMotif(@RequestBody Map<String, Object> request) {
         try {
             String nom = (String) request.get("nom");
@@ -95,6 +97,7 @@ public class ContraventionTypeController {
      * Mettre à jour un motif
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('RESPONSABLE')")
     public ResponseEntity<ContraventionTypeDTO> updateMotif(
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
@@ -133,6 +136,7 @@ public class ContraventionTypeController {
      * Supprimer un motif
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('RESPONSABLE')")
     public ResponseEntity<Void> deleteMotif(@PathVariable Long id) {
         try {
             contraventionTypeService.deleteMotif(id);

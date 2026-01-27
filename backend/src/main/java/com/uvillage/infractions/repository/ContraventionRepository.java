@@ -20,6 +20,9 @@ public interface ContraventionRepository extends JpaRepository<Contravention, Lo
     // Find by resident
     Optional<Contravention> findByTiers(Resident tiers);
 
+    // Find all contraventions for a resident (by resident id), ordered by creation date
+    List<Contravention> findByTiers_IdOrderByDateCreationDesc(Long tiersId);
+
     // Find by contravention type
     Optional<Contravention> findByTypeContravention(ContraventionType typeContravention);
 

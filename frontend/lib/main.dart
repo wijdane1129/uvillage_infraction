@@ -78,16 +78,27 @@ class MyApp extends StatelessWidget {
           '/forgot-password': (_) => const ForgotPasswordScreen(),
           '/dashboard': (_) => const DashboardScreen(),
           '/dashboard-responsable': (_) =>
-              const DashboardResponsableScreen(),
-          '/responsable-home': (_) => const ResponsableHomeScreen(),
-          '/configration_motif': (_) => const ConfigurationMotifsScreen(),
-          '/residents_screen': (_) => const ResidentsScreen(),
+              (Hive.box('authBox').get('role') == 'RESPONSABLE'
+                  ? const DashboardResponsableScreen()
+                  : const DashboardScreen()),
+          '/responsable-home': (_) => (Hive.box('authBox').get('role') == 'RESPONSABLE'
+              ? const ResponsableHomeScreen()
+              : const DashboardScreen()),
+          '/configration_motif': (_) => (Hive.box('authBox').get('role') == 'RESPONSABLE'
+              ? const ConfigurationMotifsScreen()
+              : const DashboardScreen()),
+          '/residents_screen': (_) => (Hive.box('authBox').get('role') == 'RESPONSABLE'
+              ? const ResidentsScreen()
+              : const DashboardScreen()),
         },
         onGenerateRoute: (settings) {
           // Handle routes that require arguments
           switch (settings.name) {
             case '/classer-sans-suite':
               if (settings.arguments is Contravention) {
+                // Only responsable can access classification screen
+                final isResp = Hive.box('authBox').get('role') == 'RESPONSABLE';
+                if (!isResp) return MaterialPageRoute(builder: (_) => const DashboardScreen());
                 return MaterialPageRoute(
                   builder: (_) => ClasserSansSuiteScreen(
                     contravention: settings.arguments as Contravention,
@@ -97,6 +108,8 @@ class MyApp extends StatelessWidget {
               break;
             case '/accepter-contravention':
               if (settings.arguments is Contravention) {
+                final isResp = Hive.box('authBox').get('role') == 'RESPONSABLE';
+                if (!isResp) return MaterialPageRoute(builder: (_) => const DashboardScreen());
                 return MaterialPageRoute(
                   builder: (_) => AccepterContraventionScreen(
                     contravention: settings.arguments as Contravention,
@@ -107,6 +120,8 @@ class MyApp extends StatelessWidget {
             case '/assign-contravention':
               if (settings.arguments is Map) {
                 final args = settings.arguments as Map;
+                final isResp = Hive.box('authBox').get('role') == 'RESPONSABLE';
+                if (!isResp) return MaterialPageRoute(builder: (_) => const DashboardScreen());
                 return MaterialPageRoute(
                   builder: (_) => AssignContraventionScreen(
                     contraventionId: args['contraventionId'],

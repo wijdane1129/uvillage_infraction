@@ -27,6 +27,8 @@ import com.uvillage.infractions.security.CustomUserDetailsService;
 public class ApplicationConfig {
 
     private final UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Value("${app.responsible.pattern:}")
+    private String responsiblePattern;
 
     /**
      * Explicit constructor to satisfy IDEs / language servers that do not
@@ -40,7 +42,7 @@ public class ApplicationConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         // Utilise notre CustomUserDetailsService qui charge l'utilisateur par email
-        return new CustomUserDetailsService(userRepository);
+        return new com.uvillage.infractions.security.CustomUserDetailsService(userRepository, responsiblePattern);
     }
 
     @Bean

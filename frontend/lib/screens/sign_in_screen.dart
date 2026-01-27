@@ -10,6 +10,7 @@ import '../services/api_client.dart';
 import 'forgot_password_screen.dart';
 import 'sign_up_screen.dart';
 import 'sign_up_screen.dart';
+import 'responsable_home_screen.dart';
 
 // 💡 CHANGEMENT : Étend ConsumerStatefulWidget pour utiliser Riverpod
 class SignInScreen extends ConsumerStatefulWidget {
@@ -70,9 +71,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const AgentHomeScreen()),
-      );
+      // Route according to role
+      final role = response.role?.toUpperCase();
+      if (role == 'RESPONSABLE') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ResponsableHomeScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const AgentHomeScreen()),
+        );
+      }
     } catch (e) {
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       _showSnackBar(errorMessage, isError: true);

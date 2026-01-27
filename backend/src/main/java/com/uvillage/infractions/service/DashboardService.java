@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -119,7 +120,21 @@ public class DashboardService {
 
         Map<LocalDate, Integer> countsByDate = new HashMap<>();
         for (Object[] row : dailyCounts) {
-            LocalDate date = (LocalDate) row[0];
+            Object rawDate = row[0];
+            LocalDate date;
+            if (rawDate instanceof LocalDate) {
+                date = (LocalDate) rawDate;
+            } else if (rawDate instanceof java.sql.Date) {
+                date = ((java.sql.Date) rawDate).toLocalDate();
+            } else if (rawDate instanceof java.util.Date) {
+                date = ((java.util.Date) rawDate).toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate();
+            } else {
+                // Fallback: try to parse string representation
+                date = LocalDate.parse(rawDate.toString());
+            }
+
             Integer count = ((Number) row[1]).intValue();
             countsByDate.put(date, count);
         }

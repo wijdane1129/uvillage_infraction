@@ -112,28 +112,15 @@ public class ContraventionService {
         Contravention c = contraventionRepository.findByRef(ref).orElse(null);
         if (c == null) return null;
 
-        List<String> media = (c.getMedia() == null) ? List.of() : c.getMedia().stream()
-                .map(ContraventionMedia::getMediaUrl)
-                .collect(Collectors.toList());
+        // Use the DTO conversion helper (no Lombok builder available)
+        return ContraventionDTO.fromEntity(c);
+    }
 
-        String userAuthor = "";
-        if (c.getUserAuthor() != null) {
-            userAuthor = (c.getUserAuthor().getFullName() != null && !c.getUserAuthor().getFullName().isEmpty())
-                    ? c.getUserAuthor().getFullName()
-                    : c.getUserAuthor().getUsername();
-        }
-
-        return ContraventionDTO.builder()
-                .ref(c.getRef())
-                .rowid(c.getRowid())
-                .status(c.getStatut() != null ? c.getStatut().name() : "")
-                .dateTime(c.getDateCreation() != null ? c.getDateCreation().toString() : "")
-                .motif(c.getTypeContravention() != null ? c.getTypeContravention().getLabel() : "")
-                .tiers(c.getTiers() != null ? c.getTiers().toString() : "")
-                .userAuthor(userAuthor)
-                .description(c.getDescription())
-                .media(media)
-                .build();
+    // Récupère la liste des contraventions pour un résident
+    public List<ContraventionDTO> getContraventionsByResident(Long residentId) {
+        if (residentId == null) return java.util.List.of();
+        List<Contravention> list = contraventionRepository.findByTiers_IdOrderByDateCreationDesc(residentId);
+        return list.stream().map(ContraventionDTO::fromEntity).collect(java.util.stream.Collectors.toList());
     }
 
     // -------------------- CONFIRMATION ET FACTURE --------------------

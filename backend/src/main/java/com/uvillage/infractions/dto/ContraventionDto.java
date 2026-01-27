@@ -1,54 +1,92 @@
 package com.uvillage.infractions.dto;
 
-import lombok.*;
-import java.util.List;
-import java.util.stream.Collectors;
 import com.uvillage.infractions.entity.Contravention;
-import com.uvillage.infractions.entity.ContraventionMedia;
+import java.time.format.DateTimeFormatter;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+/**
+ * Contravention DTO implemented without Lombok.
+ */
 public class ContraventionDTO {
     private String ref;
-    private String tiers;
-    private String motif;
-    private String status;
-    private String dateTime;
-    private String userAuthor;
-    private String description;
-    // Expose media URLs to frontend as a list
-    private List<String> media;
-    private Long rowid;
-    
-    /**
-     * Converts a Contravention entity to ContraventionDTO
-     */
-    public static ContraventionDTO fromEntity(Contravention c) {
-        if (c == null) return null;
-        
-        List<String> media = (c.getMedia() == null) ? List.of() : c.getMedia().stream()
-                .map(ContraventionMedia::getMediaUrl)
-                .collect(Collectors.toList());
-        
-        String userAuthor = "";
-        if (c.getUserAuthor() != null) {
-            userAuthor = (c.getUserAuthor().getFullName() != null && !c.getUserAuthor().getFullName().isEmpty())
-                    ? c.getUserAuthor().getFullName()
-                    : c.getUserAuthor().getUsername();
+    private String statut;
+    private String dateHeure;
+    private ContraventionTypeDTO typeContravention;
+    private UserDto userAuthor;
+    private TiersDTO tiers;
+
+    public ContraventionDTO() {
+    }
+
+    public String getRef() {
+        return ref;
+    }
+
+    public void setRef(String ref) {
+        this.ref = ref;
+    }
+
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
+    }
+
+    public String getDateHeure() {
+        return dateHeure;
+    }
+
+    public void setDateHeure(String dateHeure) {
+        this.dateHeure = dateHeure;
+    }
+
+    public ContraventionTypeDTO getTypeContravention() {
+        return typeContravention;
+    }
+
+    public void setTypeContravention(ContraventionTypeDTO typeContravention) {
+        this.typeContravention = typeContravention;
+    }
+
+    public UserDto getUserAuthor() {
+        return userAuthor;
+    }
+
+    public void setUserAuthor(UserDto userAuthor) {
+        this.userAuthor = userAuthor;
+    }
+
+    public TiersDTO getTiers() {
+        return tiers;
+    }
+
+    public void setTiers(TiersDTO tiers) {
+        this.tiers = tiers;
+    }
+
+    public static ContraventionDTO fromEntity(Contravention contravention) {
+        if (contravention == null) return null;
+        ContraventionDTO dto = new ContraventionDTO();
+        dto.setRef(contravention.getRef());
+
+        Object statutValue = contravention.getStatut();
+        dto.setStatut(statutValue != null ? statutValue.toString() : "INCONNU");
+
+        if (contravention.getDateCreation() != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            dto.setDateHeure(contravention.getDateCreation().format(formatter));
+        } else {
+            dto.setDateHeure("Date non définie");
         }
-        
-        return ContraventionDTO.builder()
-                .ref(c.getRef())
-                .rowid(c.getRowid())
-                .status(c.getStatut() != null ? c.getStatut().name() : "")
-                .dateTime(c.getDateCreation() != null ? c.getDateCreation().toString() : "")
-                .motif(c.getTypeContravention() != null ? c.getTypeContravention().getLabel() : "")
-                .tiers(c.getTiers() != null ? c.getTiers().toString() : "")
-                .userAuthor(userAuthor)
-                .description(c.getDescription())
-                .media(media)
-                .build();
+
+        if (contravention.getTypeContravention() != null) {
+            dto.setTypeContravention(ContraventionTypeDTO.fromEntity(contravention.getTypeContravention()));
+        }
+        if (contravention.getUserAuthor() != null) {
+            dto.setUserAuthor(UserDto.fromEntity(contravention.getUserAuthor()));
+        }
+        dto.setTiers(TiersDTO.fromEntity(contravention.getTiers()));
+        return dto;
     }
 }
