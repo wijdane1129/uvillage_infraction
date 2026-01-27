@@ -34,8 +34,8 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
 
   @override
   void dispose() {
-    // Stop auto-refresh when leaving the screen
-    ref.read(historyRefreshControllerProvider.notifier).stopAutoRefresh();
+    // Note: Cannot use 'ref' in dispose() for ConsumerStatefulWidget
+    // Async tasks should auto-cancel when widget disposes
     super.dispose();
   }
 

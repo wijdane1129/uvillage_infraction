@@ -56,6 +56,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             'Bearer ${response.token}';
       } catch (_) {}
 
+      // Check if widget is still mounted before accessing context
+      if (!mounted) return;
+
       // Update global Riverpod state
       ref
           .read(currentAgentIdProvider.notifier)
@@ -65,17 +68,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           .setAgentName(response.nomComplet ?? 'Agent Inconnu');
       ref.read(agentEmailProvider.notifier).setAgentEmail(response.email);
 
+      // Show success message before navigation
       _showSnackBar(
         "Connexion réussie ! Bienvenue, ${response.nomComplet ?? 'Agent'}",
         isError: false,
       );
 
       if (!mounted) return;
+
       // Route according to role
       final role = response.role?.toUpperCase();
       if (role == 'RESPONSABLE') {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const ResponsableHomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => const ResponsableHomeScreen(),
+          ),
         );
       } else {
         Navigator.of(context).pushReplacement(
@@ -83,10 +90,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       _showSnackBar(errorMessage, isError: true);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

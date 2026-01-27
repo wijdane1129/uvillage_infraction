@@ -20,7 +20,13 @@ class MotifService {
     }
   }
 
-  Future<Motif> createMotif(String nom, double montant1, double montant2, double montant3, double montant4) async {
+  Future<Motif> createMotif(
+    String nom,
+    double montant1,
+    double montant2,
+    double montant3,
+    double montant4,
+  ) async {
     try {
       final Dio dio = ApiClient.dio;
       final resp = await dio.post(
@@ -43,16 +49,26 @@ class MotifService {
     }
   }
 
-  Future<Motif> updateMotif(int id, String nom, double montant1, double montant2, double montant3, double montant4) async {
+  Future<Motif> updateMotif(
+    int id,
+    String nom,
+    double montant1,
+    double montant2,
+    double montant3,
+    double montant4,
+  ) async {
     try {
       final Dio dio = ApiClient.dio;
-      final resp = await dio.put('${ApiConfig.baseUrl}/api/motifs/$id', data: {
-        'nom': nom,
-        'montant1': montant1,
-        'montant2': montant2,
-        'montant3': montant3,
-        'montant4': montant4,
-      });
+      final resp = await dio.put(
+        '${ApiConfig.baseUrl}/api/motifs/$id',
+        data: {
+          'nom': nom,
+          'montant1': montant1,
+          'montant2': montant2,
+          'montant3': montant3,
+          'montant4': montant4,
+        },
+      );
 
       if (resp.statusCode == 200) {
         return Motif.fromJson(resp.data);
@@ -75,4 +91,3 @@ class MotifService {
     }
   }
 }
-
