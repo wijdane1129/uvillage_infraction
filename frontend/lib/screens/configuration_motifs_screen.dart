@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/motif_model.dart';
 import '../providers/motif_provider.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class ConfigurationMotifsScreen extends ConsumerStatefulWidget {
   const ConfigurationMotifsScreen({super.key});
@@ -391,13 +392,13 @@ class _ConfigurationMotifsScreenState
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Configuration Motifs', style: TextStyle(color: Colors.white)),
+            Text(AppLocalizations.of(context)!.configurationMotifs, style: const TextStyle(color: Colors.white)),
             Text(
-              'Gérez les motifs d\'infraction',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              AppLocalizations.of(context)!.manageReasons,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ],
         ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/resident_provider.dart';
 import '../providers/contraventions_provider.dart';
 import '../models/resident_models.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class ResidentsScreen extends ConsumerWidget {
   const ResidentsScreen({super.key});
@@ -10,10 +11,11 @@ class ResidentsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final residentsAsync = ref.watch(residentsListProvider);
+    final locale = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Résidents'),
+        title: Text(locale.residents),
         backgroundColor: const Color(0xFF1a1a2e),
         elevation: 0,
       ),
@@ -50,6 +52,7 @@ class ResidentsScreen extends ConsumerWidget {
 
               return ResidentCardWithContraventionsAsync(
                 resident: resident,
+                locale: locale,
                 onTap: () {
                   // Juste afficher les détails dans la carte
                 },
@@ -73,11 +76,13 @@ class ResidentsScreen extends ConsumerWidget {
 /// Version asynchrone qui charge les contraventions depuis l'API ou les mockées
 class ResidentCardWithContraventionsAsync extends ConsumerWidget {
   final Resident resident;
+  final AppLocalizations locale;
   final VoidCallback onTap;
 
   const ResidentCardWithContraventionsAsync({
     super.key,
     required this.resident,
+    required this.locale,
     required this.onTap,
   });
 
@@ -90,6 +95,7 @@ class ResidentCardWithContraventionsAsync extends ConsumerWidget {
       data: (contraventions) {
         return ResidentCardWithContraventions(
           resident: resident,
+          locale: locale,
           contraventions: contraventions,
           onTap: onTap,
         );
@@ -100,6 +106,7 @@ class ResidentCardWithContraventionsAsync extends ConsumerWidget {
       error: (error, stack) {
         return ResidentCardWithContraventions(
           resident: resident,
+          locale: locale,
           contraventions: [],
           onTap: onTap,
         );
@@ -162,12 +169,14 @@ class ResidentCardWithContraventionsAsync extends ConsumerWidget {
 /// Affiche la carte avec les contraventions
 class ResidentCardWithContraventions extends StatelessWidget {
   final Resident resident;
+  final AppLocalizations locale;
   final List<Map<String, dynamic>> contraventions;
   final VoidCallback onTap;
 
   const ResidentCardWithContraventions({
     super.key,
     required this.resident,
+    required this.locale,
     required this.contraventions,
     required this.onTap,
   });
@@ -314,7 +323,7 @@ class ResidentCardWithContraventions extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Historique des contraventions (${contraventions.length})',
+                      '${locale.infractions_history} (${contraventions.length})',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,

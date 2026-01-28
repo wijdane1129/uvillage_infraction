@@ -4,6 +4,8 @@ import '../models/dashboard_models.dart';
 import '../models/contravention_models.dart';
 import '../services/api_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'contravention_details_screen.dart';
 
 class DashboardResponsableScreen extends StatefulWidget {
@@ -92,7 +94,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header
-                          _buildHeader(),
+                          _buildHeader(context),
                           const SizedBox(height: 24),
 
                           // Stats Cards
@@ -117,13 +119,14 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final locale = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'Tableau de Bord',
-          style: TextStyle(
+        Text(
+          locale.dashboard,
+          style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,

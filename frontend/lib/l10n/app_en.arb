@@ -99,5 +99,18 @@
   "chooseFromGallery": "Choose from Gallery",
   "takeAPhoto": "Take a Photo",
   "passwordChanged": "Password changed",
-  "failedToChangePassword": "Failed to change password"
-}
+  "failedToChangePassword": "Failed to change password",
+  "residents": "Residents",
+  "configurationMotifs": "Configuration Motifs",
+  "manageReasons": "Manage Infraction Reasons",
+  "infractions_history": "Infractions History",
+  "totalAmends": "Total Amends",
+  "averageAmends": "Average Amends",
+  "paid": "Paid",
+  "pending_status": "Pending",
+  "resolved_status": "Resolved",
+  "totalAmoun": "Total Amount",
+  "employees": "Employees",
+  "infractions_count": "Infractions",
+  "roomNumber": "Room Number",
+  "selectProperty": "Select Property"

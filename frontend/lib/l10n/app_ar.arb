@@ -99,5 +99,18 @@
   "chooseFromGallery": "اختر من المعرض",
   "takeAPhoto": "التقط صورة",
   "passwordChanged": "تم تغيير كلمة المرور",
-  "failedToChangePassword": "فشل تغيير كلمة المرور"
-}
+  "failedToChangePassword": "فشل تغيير كلمة المرور",
+  "residents": "السكان",
+  "configurationMotifs": "إعدادات الأسباب",
+  "manageReasons": "إدارة أسباب المخالفات",
+  "infractions_history": "سجل المخالفات",
+  "totalAmends": "إجمالي الغرامات",
+  "averageAmends": "متوسط الغرامات",
+  "paid": "مدفوع",
+  "pending_status": "قيد الانتظار",
+  "resolved_status": "تم حلها",
+  "totalAmoun": "المبلغ الإجمالي",
+  "employees": "الموظفون",
+  "infractions_count": "المخالفات",
+  "roomNumber": "رقم الغرفة",
+  "selectProperty": "اختر الممتلكات"

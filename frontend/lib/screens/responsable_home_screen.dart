@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'dashboard_responsable_screen.dart';
 import 'residents_screen.dart';
 import 'configuration_motifs_screen.dart';
@@ -22,6 +23,7 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context)!;
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -34,18 +36,18 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
         backgroundColor: const Color(0xFF1a1a2e),
         selectedItemColor: const Color(0xFF00d4ff),
         unselectedItemColor: Colors.grey,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Dashboard',
+            icon: const Icon(Icons.home),
+            label: locale.dashboard,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Résidents',
+            icon: const Icon(Icons.people),
+            label: locale.residents,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Motifs',
+            icon: const Icon(Icons.settings),
+            label: locale.configurationMotifs,
           ),
         ],
       ),

@@ -99,5 +99,18 @@
   "chooseFromGallery": "Choisir depuis la galerie",
   "takeAPhoto": "Prendre une photo",
   "passwordChanged": "Mot de passe changé",
-  "failedToChangePassword": "Impossible de changer le mot de passe"
-}
+  "failedToChangePassword": "Impossible de changer le mot de passe",
+  "residents": "Résidents",
+  "configurationMotifs": "Configuration Motifs",
+  "manageReasons": "Gérer les motifs d'infraction",
+  "infractions_history": "Historique des contraventions",
+  "totalAmends": "Total amendes",
+  "averageAmends": "Amendes moyennes",
+  "paid": "Payé",
+  "pending_status": "En attente",
+  "resolved_status": "Résolu",
+  "totalAmoun": "Montant total",
+  "employees": "Employés",
+  "infractions_count": "Infractions",
+  "roomNumber": "Numéro de chambre",
+  "selectProperty": "Sélectionner une propriété"

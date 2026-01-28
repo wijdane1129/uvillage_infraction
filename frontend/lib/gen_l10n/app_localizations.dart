@@ -95,6 +95,18 @@ abstract class AppLocalizations {
   String get takeAPhoto;
   String get passwordChanged;
   String get failedToChangePassword;
+  String get residents;
+  String get configurationMotifs;
+  String get manageReasons;
+  String get infractions_history;
+  String get totalAmends;
+  String get averageAmends;
+  String get paid;
+  String get pending_status;
+  String get resolved_status;
+  String get totalAmoun;
+  String get employees;
+  String get infractions_count;
 
   /// `en` locale.
   static AppLocalizations? of(BuildContext context) {
@@ -381,9 +393,43 @@ class _AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failedToChangePassword => 'Failed to change password';
-}
 
-/// Implementation of [AppLocalizations] for the French locale.
+  @override
+  String get residents => 'Residents';
+
+  @override
+  String get configurationMotifs => 'Configuration Motifs';
+
+  @override
+  String get manageReasons => 'Manage Infraction Reasons';
+
+  @override
+  String get infractions_history => 'Infractions History';
+
+  @override
+  String get totalAmends => 'Total Amends';
+
+  @override
+  String get averageAmends => 'Average Amends';
+
+  @override
+  String get paid => 'Paid';
+
+  @override
+  String get pending_status => 'Pending';
+
+  @override
+  String get resolved_status => 'Resolved';
+
+  @override
+  String get totalAmoun => 'Total Amount';
+
+  @override
+  String get employees => 'Employees';
+
+  @override
+  String get infractions_count => 'Infractions';
+}
 class _AppLocalizationsFr extends AppLocalizations {
   _AppLocalizationsFr();
 
@@ -635,6 +681,42 @@ class _AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get failedToChangePassword => 'Impossible de changer le mot de passe';
+
+  @override
+  String get residents => 'Résidents';
+
+  @override
+  String get configurationMotifs => 'Configuration Motifs';
+
+  @override
+  String get manageReasons => 'Gérer les motifs d\'infraction';
+
+  @override
+  String get infractions_history => 'Historique des contraventions';
+
+  @override
+  String get totalAmends => 'Total amendes';
+
+  @override
+  String get averageAmends => 'Amendes moyennes';
+
+  @override
+  String get paid => 'Payé';
+
+  @override
+  String get pending_status => 'En attente';
+
+  @override
+  String get resolved_status => 'Résolu';
+
+  @override
+  String get totalAmoun => 'Montant total';
+
+  @override
+  String get employees => 'Employés';
+
+  @override
+  String get infractions_count => 'Infractions';
 }
 
 /// Implementation of [AppLocalizations] for the Arabic locale.
@@ -889,6 +971,42 @@ class _AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get failedToChangePassword => 'فشل تغيير كلمة المرور';
+
+  @override
+  String get residents => 'السكان';
+
+  @override
+  String get configurationMotifs => 'إعدادات الأسباب';
+
+  @override
+  String get manageReasons => 'إدارة أسباب المخالفات';
+
+  @override
+  String get infractions_history => 'سجل المخالفات';
+
+  @override
+  String get totalAmends => 'إجمالي الغرامات';
+
+  @override
+  String get averageAmends => 'متوسط الغرامات';
+
+  @override
+  String get paid => 'مدفوع';
+
+  @override
+  String get pending_status => 'قيد الانتظار';
+
+  @override
+  String get resolved_status => 'تم حلها';
+
+  @override
+  String get totalAmoun => 'المبلغ الإجمالي';
+
+  @override
+  String get employees => 'الموظفون';
+
+  @override
+  String get infractions_count => 'المخالفات';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
