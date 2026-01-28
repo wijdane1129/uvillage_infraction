@@ -7,6 +7,7 @@ import '../providers/agent_auth_provider.dart';
 import '../config/app_theme.dart';
 import '../widgets/gradient_button.dart';
 import '../services/auth_service.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -77,14 +78,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
+        final locale = AppLocalizations.of(context)!;
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text(
-                  'Choose from Gallery',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  locale.chooseFromGallery,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -93,9 +95,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text(
-                  'Take a Photo',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  locale.takeAPhoto,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -118,6 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
+        final locale = AppLocalizations.of(context)!;
         return Padding(
           // Ensure the sheet scrolls above the keyboard and on small screens
           padding: EdgeInsets.only(
@@ -130,9 +133,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Edit Profile",
-                    style: TextStyle(
+                  Text(
+                    locale.editProfile,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -142,7 +145,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   TextField(
                     controller: _usernameController,
                     decoration: InputDecoration(
-                      labelText: "Username",
+                      labelText: locale.username,
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: AppTheme.darkBg,
@@ -156,7 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      labelText: "Email",
+                      labelText: locale.email,
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: AppTheme.darkBg,
@@ -170,7 +173,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     controller: _currentPasswordController,
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: "Current Password",
+                      labelText: locale.currentPassword,
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: AppTheme.darkBg,
@@ -183,7 +186,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   DropdownButtonFormField<String>(
                     value: _selectedLanguage,
                     decoration: InputDecoration(
-                      labelText: 'Language',
+                      labelText: locale.language,
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: AppTheme.darkBg,
@@ -208,7 +211,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     controller: _passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: "New Password",
+                      labelText: locale.newPassword,
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: AppTheme.darkBg,
@@ -219,7 +222,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 20),
                   GradientButton(
-                    text: 'Save Changes',
+                    text: locale.saveChanges,
                     isLoading: profileIsLoading,
                     onPressed: () async {
                       setState(() {
@@ -264,8 +267,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         final String msg =
                             result['message']?.toString() ??
                             (ok
-                                ? 'Password changed'
-                                : 'Failed to change password');
+                                ? locale.passwordChanged
+                                : locale.failedToChangePassword);
                         if (ok) {
                           _localUser.setPassword(newPassword);
                         }
@@ -295,6 +298,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context)!;
     // Read agent name and email from the shared auth provider; fallback to local user
     final agentName = ref.watch(agentNameProvider);
     final agentEmail = ref.watch(agentEmailProvider);
@@ -307,9 +311,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppTheme.darkBg, // Deep dark background
       appBar: AppBar(
-        title: const Text(
-          "Profile",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          locale.profile,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppTheme.darkBg,
         elevation: 0,
@@ -327,7 +331,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ).pushNamedAndRemoveUntil('/welcome', (route) => false);
               }
             },
-            tooltip: 'Logout',
+            tooltip: locale.logout,
           ),
         ],
       ),
@@ -363,10 +367,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoItem("USERNAME", user['username']!),
-                    _buildInfoItem("EMAIL", user['email']!),
-                    _buildInfoItem("LANGUAGE", user['language']!),
-                    _buildInfoItem("PASSWORD", "••••••••"),
+                    _buildInfoItem(locale.username.toUpperCase(), user['username']!),
+                    _buildInfoItem(locale.email.toUpperCase(), user['email']!),
+                    _buildInfoItem(locale.language.toUpperCase(), user['language']!),
+                    _buildInfoItem(locale.password.toUpperCase(), "••••••••"),
                   ],
                 ),
               ),
@@ -377,7 +381,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               // Edit Profile button
               GradientButton(
-                text: 'Edit Profile',
+                text: locale.editProfile,
                 isLoading: profileIsLoading,
                 onPressed: _handleEditProfile,
               ),

@@ -4,7 +4,9 @@ import '../config/app_theme.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'verification_code_screen.dart';
+import '../widgets/language_switcher.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -49,10 +51,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
     final authState = ref.watch(authProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.darkBg,
+      appBar: AppBar(
+        backgroundColor: AppTheme.darkBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: const [LanguageSwitcher()],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -61,14 +73,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const SizedBox(height: 24),
               // Title
               Text(
-                'Forgot your password?',
+                locale!.forgotYourPassword,
                 style: Theme.of(context).textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               // Subtitle
               Text(
-                'Enter the email associated with your account\nand we\'ll send you a verification code to reset\nyour password.',
+                locale.enterEmailToReset,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -97,8 +109,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your email address',
+                    decoration: InputDecoration(
+                      hintText: locale.emailAddress,
                     ),
                   ),
                 ],
@@ -106,7 +118,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const SizedBox(height: 32),
               // Send Verification Code Button
               GradientButton(
-                text: 'Send Verification Code',
+                text: locale.sendCode,
                 isLoading: authState.isLoading,
                 onPressed: _handleForgotPassword,
               ),

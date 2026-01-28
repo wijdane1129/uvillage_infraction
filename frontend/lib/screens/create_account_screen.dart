@@ -5,6 +5,8 @@ import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 import 'sign_in_screen.dart';
 import '../widgets/gradient_button.dart';
+import '../gen_l10n/app_localizations.dart';
+import '../widgets/language_switcher.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -48,6 +50,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
     final authState = ref.watch(authProvider);
 
     // Listen for auth state changes and navigate to SignIn on successful sign-up
@@ -73,6 +76,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: const [LanguageSwitcher()],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -104,7 +108,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               const SizedBox(height: 32),
               // Title
               Text(
-                'Create Account',
+                locale!.createAccount,
                 style: Theme.of(context).textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),
@@ -116,7 +120,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   children: [
                     _buildTextField(
                       controller: _fullNameController,
-                      label: 'Full Name',
+                      label: locale.fullName,
                       hintText: 'Enter your full name',
                       validator: (value) {
                         if (value?.isEmpty ?? true) {
@@ -128,7 +132,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _emailController,
-                      label: 'Email',
+                      label: locale.email,
                       hintText: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -144,7 +148,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _passwordController,
-                      label: 'Password',
+                      label: locale.password,
                       hintText: 'Enter your password',
                       obscureText: true,
                       validator: (value) {
@@ -160,7 +164,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _confirmPasswordController,
-                      label: 'Confirm Password',
+                      label: locale.confirmPassword,
                       hintText: 'Confirm your password',
                       obscureText: true,
                       validator: (value) {
@@ -176,7 +180,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 32),
                     // Sign Up Button
                     GradientButton(
-                      text: 'Sign Up',
+                      text: locale.signUp,
                       isLoading: authState.isLoading,
                       onPressed: _handleSignUp,
                     ),
@@ -206,15 +210,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Already have an account? ',
-                    style: TextStyle(color: AppTheme.textSecondary),
+                  Text(
+                    '${locale.signIn}? ',
+                    style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(
+                    child: Text(
+                      locale.signIn,
+                      style: const TextStyle(
                         color: AppTheme.pinkAccent,
                         fontWeight: FontWeight.w600,
                       ),

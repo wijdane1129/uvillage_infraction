@@ -4,6 +4,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../providers/dashboard_provider.dart';
 import '../config/app_theme.dart';
 import '../models/dashboard_models.dart';
+import '../gen_l10n/app_localizations.dart';
+import '../widgets/language_switcher.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -35,10 +37,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard Contraventions'),
+        title: Text(locale!.dashboardContraventions),
         actions: [
+          const LanguageSwitcher(),
           IconButton(
             icon: const Icon(Icons.refresh, color: AppTheme.textPrimary),
             onPressed: () {

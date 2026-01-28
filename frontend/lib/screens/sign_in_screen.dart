@@ -11,6 +11,8 @@ import 'forgot_password_screen.dart';
 import 'sign_up_screen.dart';
 import 'sign_up_screen.dart';
 import 'responsable_home_screen.dart';
+import '../gen_l10n/app_localizations.dart';
+import '../widgets/language_switcher.dart';
 
 // 💡 CHANGEMENT : Étend ConsumerStatefulWidget pour utiliser Riverpod
 class SignInScreen extends ConsumerStatefulWidget {
@@ -123,6 +125,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppTheme.darkBg,
@@ -131,6 +135,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: const [LanguageSwitcher()],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -163,12 +168,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 40),
               Text(
-                'Welcome Back',
+                locale!.welcomeBack,
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
               const SizedBox(height: 5),
               Text(
-                'Log in to manage campus infractions.',
+                locale.logInToCampus,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 40),
@@ -178,8 +183,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        hintText: 'Email Address',
+                      decoration: InputDecoration(
+                        hintText: locale.emailAddress,
                       ),
                       style: const TextStyle(color: AppTheme.textPrimary),
                     ),
@@ -188,7 +193,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
                       decoration: InputDecoration(
-                        hintText: 'Password',
+                        hintText: locale.password,
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isPasswordVisible
@@ -219,9 +224,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         ),
                       );
                     },
-                    child: const Text(
-                      'Forgot password?',
-                      style: TextStyle(color: AppTheme.purpleAccent),
+                    child: Text(
+                      locale.forgotPassword,
+                      style: const TextStyle(color: AppTheme.purpleAccent),
                     ),
                   ),
                 ],
@@ -241,7 +246,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                          : const Text('Login'),
+                          : Text(locale.login),
                 ),
               ),
               const SizedBox(height: 24),
@@ -256,11 +261,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   },
                   child: RichText(
                     text: TextSpan(
-                      text: 'Don\'t have an account? ',
+                      text: locale.dontHaveAccount,
                       style: Theme.of(context).textTheme.bodyMedium,
                       children: <TextSpan>[
                         TextSpan(
-                          text: 'Sign up',
+                          text: ' ${locale.signUp}',
                           style: Theme.of(
                             context,
                           ).textTheme.bodyMedium?.copyWith(

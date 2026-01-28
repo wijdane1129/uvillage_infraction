@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart' as p;
 
 import 'config/app_theme.dart';
 import 'services/api_client.dart';
+import 'providers/language_provider.dart';
+import 'gen_l10n/app_localizations.dart';
 
 // Providers
 import 'providers/dashboard_provider.dart';
@@ -55,11 +58,13 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(languageProvider);
+
     return p.MultiProvider(
       providers: [
         p.ChangeNotifierProvider(create: (_) => DashboardProvider()),
@@ -69,6 +74,20 @@ class MyApp extends StatelessWidget {
         title: 'Infractions App',
         theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
+        
+        // ✅ Support multilingue
+        locale: locale,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('fr'),
+          Locale('ar'),
+        ],
 
         initialRoute: '/welcome',
         routes: {

@@ -10,6 +10,8 @@ import '../services/resident_mock_service.dart';
 import '../widgets/gradient_button.dart';
 import 'contravention_step2.dart';
 import 'User_profile.dart';
+import '../gen_l10n/app_localizations.dart';
+import '../widgets/language_switcher.dart';
 // Note: we avoid importing the original `agent_infraction_screen.dart` here
 // to prevent the earlier compiler/resolution issue. A local copy of the
 // screen and small helper widgets are provided below.
@@ -41,6 +43,7 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
     // Dans le Widget build de AgentHomeScreen
 
     // 💡 L'appel est correct car agentNameProvider retourne un String
@@ -68,7 +71,7 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
                           Expanded(
                             child: StatCard(
                               count: 0,
-                              label: "Aujourd'hui",
+                              label: locale!.today,
                               subLabel: "...",
                               startColor: AppTheme.purpleAccent,
                               endColor: AppTheme.cyanAccent,
@@ -78,7 +81,7 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
                           Expanded(
                             child: StatCard(
                               count: 0,
-                              label: "Cette semaine",
+                              label: locale.thisWeek,
                               subLabel: "...",
                               startColor: AppTheme.pinkAccent,
                               endColor: AppTheme.purpleAccent,
@@ -104,8 +107,8 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
                         Expanded(
                           child: StatCard(
                             count: todayCount,
-                            label: "Aujourd'hui",
-                            subLabel: '$todayCount infractions',
+                            label: locale!.today,
+                            subLabel: '$todayCount ${locale.infractions}',
                             startColor: AppTheme.purpleAccent,
                             endColor: AppTheme.cyanAccent,
                           ),
@@ -114,8 +117,8 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
                         Expanded(
                           child: StatCard(
                             count: weekCount,
-                            label: "Cette semaine",
-                            subLabel: '$weekCount infractions',
+                            label: locale.thisWeek,
+                            subLabel: '$weekCount ${locale.infractions}',
                             startColor: AppTheme.pinkAccent,
                             endColor: AppTheme.purpleAccent,
                           ),
@@ -131,7 +134,7 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
 
             // Titre de l'historique
             Text(
-              'Mes dernières infractions',
+              locale!.myLatestInfractions,
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontSize: 20),
@@ -196,6 +199,7 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
 // --- APPARTIENT À agent_home_screen.dart (Les composants) ---
 
 PreferredSizeWidget _buildAppBar(String agentName, BuildContext context) {
+  final locale = AppLocalizations.of(context)!;
   return AppBar(
     automaticallyImplyLeading: false,
     title: Row(
@@ -214,7 +218,7 @@ PreferredSizeWidget _buildAppBar(String agentName, BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Bonjour, ${agentName.split(' ').first}',
+              '${locale.hello}, ${agentName.split(' ').first}',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             Row(
@@ -228,9 +232,9 @@ PreferredSizeWidget _buildAppBar(String agentName, BuildContext context) {
                   ),
                 ),
                 const SizedBox(width: 4.0),
-                const Text(
-                  'En ligne',
-                  style: TextStyle(
+                Text(
+                  locale.online,
+                  style: const TextStyle(
                     color: AppTheme.successGreen,
                     fontSize: 12.0,
                   ),
@@ -241,6 +245,7 @@ PreferredSizeWidget _buildAppBar(String agentName, BuildContext context) {
         ),
       ],
     ),
+    actions: const [LanguageSwitcher()],
   );
 }
 
@@ -626,6 +631,7 @@ class _AgentInfractionScreenLocalState
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
     final motifsAsync = ref.watch(contraventionTypeLabelsProvider);
     const List<String> buildings = [
       'Immeuble A',
@@ -648,6 +654,7 @@ class _AgentInfractionScreenLocalState
           ),
         ),
         actions: const [
+          LanguageSwitcher(),
           Padding(
             padding: EdgeInsets.only(right: 16.0),
             child: Center(
@@ -701,7 +708,7 @@ class _AgentInfractionScreenLocalState
             const SizedBox(height: 32.0),
 
             Text(
-              'Identifier le résident',
+              locale!.identifyResident,
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -710,16 +717,16 @@ class _AgentInfractionScreenLocalState
 
             RoomInputField(
               controller: roomController,
-              label: 'Numéro de chambre',
+              label: locale.roomNumber,
               icon: Icons.numbers,
-              hint: '# Numéro de chambre',
+              hint: locale.roomNumber,
             ),
             const SizedBox(height: 16.0),
 
             CustomDropdownField(
-              label: 'Sélectionner un immeuble',
+              label: locale.selectProperty,
               icon: Icons.apartment,
-              hint: 'Sélectionner un immeuble',
+              hint: locale.selectProperty,
               items: buildings,
               onChanged: (newValue) {
                 setState(() {
@@ -774,7 +781,7 @@ class _AgentInfractionScreenLocalState
                   isSearching = false;
                 });
               },
-              text: isSearching ? 'Recherche...' : 'Rechercher',
+              text: isSearching ? '${locale.search}...' : locale.search,
               height: 55,
               radius: 12,
             ),
@@ -838,7 +845,7 @@ class _AgentInfractionScreenLocalState
               ),
             );
           },
-          text: 'Suivant',
+          text: locale.next,
           height: 60,
         ),
       ),

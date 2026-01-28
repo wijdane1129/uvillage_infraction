@@ -4,6 +4,7 @@ import com.uvillage.infractions.dto.*;
 import com.uvillage.infractions.entity.User;
 import com.uvillage.infractions.repository.UserRepository;
 import com.uvillage.infractions.security.JwtUtils;
+import com.uvillage.infractions.util.MessageUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final MessageUtil messageUtil;
     private final Pattern responsiblePattern;
 
     @Autowired
@@ -39,12 +41,14 @@ public class AuthService {
                        UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        EmailService emailService,
+                       MessageUtil messageUtil,
                        @org.springframework.beans.factory.annotation.Value("${app.responsible.pattern:}") String responsiblePattern) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.messageUtil = messageUtil;
         if (responsiblePattern != null && !responsiblePattern.isBlank()) {
             this.responsiblePattern = Pattern.compile(responsiblePattern, Pattern.CASE_INSENSITIVE);
         } else {
@@ -57,11 +61,11 @@ public class AuthService {
     // --------------------
     public AuthResponseDto register(CreateAccountRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            return AuthResponseDto.fail("Email is already in use");
+            return AuthResponseDto.fail(messageUtil.getMessage("user.email.exists"));
         }
 
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return AuthResponseDto.fail("Passwords do not match");
+            return AuthResponseDto.fail(messageUtil.getMessage("user.password.mismatch"));
         }
 
         validatePassword(request.getPassword());
@@ -92,7 +96,7 @@ public class AuthService {
 
         String token = jwtUtils.generateToken(ud);
 
-        return AuthResponseDto.success("Registration successful", token);
+        return AuthResponseDto.success(messageUtil.getMessage("user.signup.success"), token);
     }
 
     // --------------------
@@ -109,11 +113,15 @@ public class AuthService {
         String token = jwtUtils.generateToken(userDetails);
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + request.getEmail()));
+                .orElseThrow(() -> new UsernameNotFoundException(
+                    messageUtil.getMessage("user.not.found", new Object[]{request.getEmail()})
+                ));
 
         String fullName = (user.getFullName() != null && !user.getFullName().isEmpty())
                 ? user.getFullName()
                 : user.getUsername();
+
+        logger.info("User logged in successfully: {}", user.getEmail());
 
         return LoginResponse.builder()
                 .token(token)

@@ -9,6 +9,8 @@ import '../models/resident_model.dart';
 import '../providers/contravention_provider.dart';
 import 'package:infractions_app/widgets/gradient_button.dart';
 import '../screens/infraction_confirmation_screen.dart';
+import '../gen_l10n/app_localizations.dart';
+import '../widgets/language_switcher.dart';
 
 class ContraventionStep2Screen extends ConsumerStatefulWidget {
   final String? motif;
@@ -99,6 +101,7 @@ class _ContraventionStep2ScreenState
 
   @override
   Widget build(BuildContext context) {
+    final locale = AppLocalizations.of(context);
     final formState = ref.watch(contraventionFormDataProvider);
 
     // Watch the media list specifically for UI updates
@@ -110,7 +113,7 @@ class _ContraventionStep2ScreenState
     return Scaffold(
       appBar: AppBar(
         // Style adjustments for a dark/themed app look based on the image
-        title: const Text('Contravention Form'),
+        title: Text(locale!.infractions_form),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
@@ -118,6 +121,7 @@ class _ContraventionStep2ScreenState
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: const [LanguageSwitcher()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -125,7 +129,7 @@ class _ContraventionStep2ScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Étape 2: Preuves & Détails',
+              '${locale.step} 2: Preuves & Détails',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: const Color(0xFFE0B0FF), // Purple/Pink color from image
                 fontWeight: FontWeight.bold,
@@ -359,6 +363,7 @@ class _ContraventionStep2ScreenState
   }
 
   Widget _buildNavigationButtons(BuildContext context) {
+    final locale = AppLocalizations.of(context)!;
     return Row(
       children: [
         
@@ -381,13 +386,15 @@ class _ContraventionStep2ScreenState
         const SizedBox(width: 16),
         Expanded(
           child: GradientButton(
-            text: 'Suivant',
+            text: locale.next,
             onPressed: () {
+              // Get locale again here for the callback
+              final currentLocale = AppLocalizations.of(context);
               // Guard: re-check description at time of click
               final isDescriptionValid = descriptionController.text.trim().isNotEmpty;
               if (!isDescriptionValid) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('La description est requise pour continuer')),
+                  SnackBar(content: Text(currentLocale?.loading ?? 'Loading...')),
                 );
                 return;
               }
