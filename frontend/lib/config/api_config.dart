@@ -11,7 +11,7 @@ class ApiConfig {
 
   /// CRM API Base URL - Update this when CRM API is available
   /// Example: 'http://192.168.1.100:3000' or 'https://crm.example.com'
-  static const String CRM_API_URL = 'http://127.0.0.1:3000';
+  static const String CRM_API_URL = 'http://192.168.68.100:3000';
 
   /// CRM Dashboard endpoint
   static const String CRM_DASHBOARD_ENDPOINT = '/api/crm/dashboard/stats';
@@ -20,8 +20,8 @@ class ApiConfig {
   static String get crmDashboardUrl => '$CRM_API_URL$CRM_DASHBOARD_ENDPOINT';
 
   /// Backend Infraction API URL (used when CRM is not available)
-  /// Use 127.0.0.1 instead of localhost for better web compatibility
-  static const String BACKEND_API_URL = 'http://127.0.0.1:8080';
+  /// Use 192.168.68.100 for network access from devices
+  static const String BACKEND_API_URL = 'http://192.168.68.100:8080';
 
   /// Backend dashboard endpoint
   static const String BACKEND_DASHBOARD_ENDPOINT = '/api/dashboard/stats';

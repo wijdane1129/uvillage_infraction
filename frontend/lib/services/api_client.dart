@@ -11,13 +11,8 @@ class ApiClient {
   
   /// Base URL dynamique selon la plateforme
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8080/api/v1';
-    } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8080/api/v1';
-    } else {
-      return 'http://localhost:8080/api/v1';
-    }
+    // Always use the local network IP for all platforms to allow phone access
+    return 'http://192.168.68.100:8080/api/v1';
   }
 
   /// Initialisation du client Dio avec intercepteur JWT

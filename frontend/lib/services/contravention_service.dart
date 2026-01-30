@@ -2,12 +2,19 @@
 
 import 'package:dio/dio.dart';
 import 'api_client.dart'; // Pour obtenir l'instance Dio
+import 'offline_storage_service.dart';
+import 'connectivity_service.dart';
 
 class ContraventionService {
   final Dio _dio = ApiClient.dio;
+  final OfflineStorageService _offlineStorage;
+  final ConnectivityService _connectivity;
   
-  // Si votre constructeur prend un argument, décommentez ceci :
-  // ContraventionService(/* Argument ici */); 
+  ContraventionService({
+    required OfflineStorageService offlineStorage,
+    required ConnectivityService connectivity,
+  })  : _offlineStorage = offlineStorage,
+        _connectivity = connectivity;
   
   // 🎯 CORRECTION : Définir la méthode fetchStats(agentRowid)
   Future<Map<String, dynamic>> fetchStats(int agentRowid) async {
@@ -37,6 +44,29 @@ class ContraventionService {
     List<String>? mediaUrls,
   }) async {
     try {
+      // Check connectivity
+      final hasConnection = await _connectivity.hasConnection();
+      
+      if (!hasConnection) {
+        // Save offline
+        print('📱 [CREATE] No connection - saving offline');
+        final offlineId = await _offlineStorage.saveOfflineContravention(
+          description: description,
+          typeLabel: typeLabel,
+          userAuthorId: userAuthorId,
+          tiersId: tiersId,
+          mediaUrls: mediaUrls ?? [],
+          mediaTypes: List.filled(mediaUrls?.length ?? 0, 'unknown'),
+        );
+        
+        return {
+          'id': offlineId,
+          'status': 'pending',
+          'offline': true,
+          'message': 'Contravention créée en mode hors ligne. Elle sera synchronisée automatiquement.',
+        };
+      }
+
       // Build payload and remove nulls
       final Map<String, dynamic> payload = {
         'description': description,
@@ -52,14 +82,40 @@ class ContraventionService {
       final response = await _dio.post('/contraventions', data: payload);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return response.data as Map<String, dynamic>;
+        return {
+          ...response.data as Map<String, dynamic>,
+          'offline': false,
+        };
       } else {
         throw Exception('Erreur création contravention: ${response.statusCode}');
       }
     } on DioException catch (e) {
       print('❌ [CREATE] Erreur Dio: ${e.response?.statusCode}');
       print('❌ [CREATE] Erreur Dio détails: ${e.response?.data}');
-      rethrow;
+      
+      // Try to save offline if there's an error
+      try {
+        print('📱 [CREATE] Sauvegarde en mode hors ligne après erreur');
+        final offlineId = await _offlineStorage.saveOfflineContravention(
+          description: description,
+          typeLabel: typeLabel,
+          userAuthorId: userAuthorId,
+          tiersId: tiersId,
+          mediaUrls: mediaUrls ?? [],
+          mediaTypes: List.filled(mediaUrls?.length ?? 0, 'unknown'),
+        );
+        
+        return {
+          'id': offlineId,
+          'status': 'pending',
+          'offline': true,
+          'message': 'Erreur de connexion. Contravention créée en mode hors ligne.',
+          'error': e.message,
+        };
+      } catch (offlineError) {
+        print('❌ [CREATE] Impossible de sauvegarder hors ligne: $offlineError');
+        rethrow;
+      }
     }
   }
 

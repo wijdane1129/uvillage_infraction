@@ -59,9 +59,8 @@ class AuthService {
   static const String _authBoxName = 'authBox';
 
   static String get _baseHost {
-    if (kIsWeb) return 'http://127.0.0.1:8080';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8080';
-    return 'http://localhost:8080';
+    // Always use the local network IP for all platforms to allow phone access
+    return 'http://192.168.68.100:8080';
   }
 
   // Login endpoint uses the /api/v1/auth path

@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 class UserProfileService {
   final Dio dio;
   // Use the auth path on the backend: GET /api/auth/profile and PUT /api/auth/edit-profile
-  final String baseUrl = 'http://localhost:8080/api/auth';
+  final String baseUrl = 'http://192.168.68.100:8080/api/auth';
 
   UserProfileService({required this.dio});
 

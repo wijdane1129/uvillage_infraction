@@ -8,6 +8,7 @@ import '../providers/history_provider.dart';
 import '../models/resident_model.dart';
 import '../services/resident_mock_service.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/sync_status_indicator.dart';
 import 'contravention_step2.dart';
 import 'User_profile.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -59,6 +60,10 @@ class _AgentHomeScreenState extends ConsumerState<AgentHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            // Sync Status Indicator
+            const SyncStatusIndicator(),
+            const SizedBox(height: 16.0),
+            
             // Correction: explicite le type
             // (debug button removed)
             // Cartes Statistiques

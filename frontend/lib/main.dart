@@ -6,6 +6,8 @@ import 'package:provider/provider.dart' as p;
 
 import 'config/app_theme.dart';
 import 'services/api_client.dart';
+import 'services/offline_storage_service.dart';
+import 'services/connectivity_service.dart';
 import 'providers/language_provider.dart';
 import 'gen_l10n/app_localizations.dart';
 
@@ -48,6 +50,14 @@ Future<void> main() async {
 
   // API client (JWT)
   await ApiClient.init();
+
+  // Initialize offline storage
+  final offlineStorage = OfflineStorageService();
+  await offlineStorage.init();
+
+  // Initialize connectivity service
+  final connectivity = ConnectivityService();
+  await connectivity.init();
 
   debugPrint('✅ App initialized successfully');
 

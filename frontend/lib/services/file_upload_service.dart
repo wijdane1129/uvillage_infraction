@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 class FileUploadService {
   final Dio dio;
 
-  final String baseUrl = 'http://localhost:8080/api/contravention/media';
+  final String baseUrl = 'http://192.168.68.100:8080/api/contravention/media';
 
   FileUploadService({required this.dio});
   

@@ -3,6 +3,8 @@ import '../models/contravention_models.dart';
 
 import '../services/contravention_service.dart';
 import '../services/auth_service.dart';
+import '../services/offline_storage_service.dart';
+import '../services/connectivity_service.dart';
 import 'agent_auth_provider.dart';
 
 // ===============================
@@ -50,10 +52,23 @@ final contraventionFormDataProvider =
 });
 
 // ===============================
-//        SERVICE PROVIDER
+//        SERVICE PROVIDERS
 // ===============================
+final offlineStorageServiceProvider = Provider<OfflineStorageService>((ref) {
+  return OfflineStorageService();
+});
+
+final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
+  return ConnectivityService();
+});
+
 final contraventionServiceProvider = Provider<ContraventionService>((ref) {
-  return ContraventionService();
+  final offlineStorage = ref.watch(offlineStorageServiceProvider);
+  final connectivity = ref.watch(connectivityServiceProvider);
+  return ContraventionService(
+    offlineStorage: offlineStorage,
+    connectivity: connectivity,
+  );
 });
 
 // ===============================

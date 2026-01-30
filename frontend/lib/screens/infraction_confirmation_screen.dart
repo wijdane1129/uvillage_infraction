@@ -166,7 +166,7 @@ class InfractionConfirmationScreen extends ConsumerWidget {
                               const Center(child: CircularProgressIndicator()),
                     );
 
-                    await service.createContravention(
+                    final result = await service.createContravention(
                       description: description,
                       typeLabel: motif,
                       userAuthorId: agentRowid,
@@ -182,9 +182,20 @@ class InfractionConfirmationScreen extends ConsumerWidget {
                     // Invalidate history so dashboard refreshes
                     ref.invalidate(agentHistoryProvider(agentRowid));
 
+                    // Check if it was created offline or online
+                    final isOffline = result['offline'] as bool? ?? false;
+                    final message = result['message'] as String? ??
+                        (isOffline
+                            ? 'Infraction créée en mode hors ligne'
+                            : 'Infraction créée');
+
                     // Show success and navigate to home screen
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Infraction créée')),
+                      SnackBar(
+                        content: Text(message),
+                        backgroundColor:
+                            isOffline ? Colors.orange : Colors.green,
+                      ),
                     );
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
