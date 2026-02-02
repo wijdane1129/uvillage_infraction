@@ -1,0 +1,394 @@
+@startuml UVILLAGE_Infractions_Class_Diagram
+
+!theme default
+title UVILLAGE Infractions Management System - Class Diagram
+
+' Define packages
+package "Entities" <<folder>> {
+    entity User {
+        - id: Long
+        - email: String
+        - passwordHash: String
+        - firstName: String
+        - lastName: String
+        - role: UserRole
+        - isActive: Boolean
+        - createdAt: LocalDateTime
+        - updatedAt: LocalDateTime
+    }
+
+    entity Contravention {
+        - id: Long
+        - dateInfraction: LocalDate
+        - description: String
+        - location: String
+        - statut: StatutContravention
+        - createdAt: LocalDateTime
+        - updatedAt: LocalDateTime
+    }
+
+    entity ContraventionType {
+        - id: Long
+        - name: String
+        - description: String
+        - baseAmount: BigDecimal
+        - severity: String
+    }
+
+    entity Resident {
+        - id: Long
+        - firstName: String
+        - lastName: String
+        - email: String
+        - phone: String
+        - address: String
+        - registrationDate: LocalDateTime
+    }
+
+    entity ContraventionMedia {
+        - id: Long
+        - fileName: String
+        - filePath: String
+        - mediaType: String
+        - uploadDate: LocalDateTime
+    }
+
+    entity Facture {
+        - id: Long
+        - invoiceNumber: String
+        - amount: BigDecimal
+        - status: InvoiceStatus
+        - dueDate: LocalDate
+        - pdfPath: String
+        - createdAt: LocalDateTime
+    }
+
+    entity Recidive {
+        - id: Long
+        - residenceId: Long
+        - violationCount: Integer
+        - lastViolationDate: LocalDate
+        - recidivismLevel: String
+    }
+
+    entity PasswordResetToken {
+        - id: Long
+        - token: String
+        - expiryDate: LocalDateTime
+        - used: Boolean
+    }
+
+    entity Immeuble {
+        - id: Long
+        - name: String
+        - address: String
+        - numberOfUnits: Integer
+    }
+
+    entity Chambre {
+        - id: Long
+        - number: String
+        - floor: Integer
+        - resident_id: Long
+    }
+}
+
+package "DTOs" <<folder>> {
+    class UserDto {
+        - id: Long
+        - email: String
+        - firstName: String
+        - lastName: String
+        - role: String
+    }
+
+    class ContraventionDTO {
+        - id: Long
+        - residentName: String
+        - infractionType: String
+        - date: LocalDate
+        - statut: String
+        - location: String
+    }
+
+    class CreateContraventionRequest {
+        - residentId: Long
+        - contraventionTypeId: Long
+        - dateInfraction: LocalDate
+        - description: String
+        - location: String
+        - photosUrls: List<String>
+    }
+
+    class DashboardStatsDto {
+        - totalInfractions: Long
+        - pendingCount: Long
+        - resolvedCount: Long
+        - totalFines: BigDecimal
+        - recidivismRate: Double
+    }
+
+    class LoginRequest {
+        - email: String
+        - password: String
+    }
+
+    class LoginResponse {
+        - token: String
+        - email: String
+        - message: String
+    }
+
+    class AuthResponseDto {
+        - token: String
+        - email: String
+        - firstName: String
+        - lastName: String
+        - role: String
+    }
+}
+
+package "Controllers" <<folder>> {
+    class AuthController {
+        + login(LoginRequest): ResponseEntity<LoginResponse>
+        + register(CreateAccountRequest): ResponseEntity<UserDto>
+        + verifyCode(VerificationCodeRequest): ResponseEntity<?>
+        + forgotPassword(ForgotPasswordRequest): ResponseEntity<?>
+        + resetPassword(ResetPasswordRequest): ResponseEntity<?>
+        + changePassword(Long, ChangePasswordRequest): ResponseEntity<?>
+    }
+
+    class ContraventionController {
+        + getAll(page, size, status): ResponseEntity<Page<ContraventionDTO>>
+        + getById(id): ResponseEntity<ContraventionDTO>
+        + create(request): ResponseEntity<ContraventionDTO>
+        + update(id, request): ResponseEntity<ContraventionDTO>
+        + delete(id): ResponseEntity<?>
+        + updateStatus(id, status): ResponseEntity<?>
+    }
+
+    class DashboardController {
+        + getStats(): ResponseEntity<DashboardStatsDto>
+        + getReports(): ResponseEntity<List<ReportDto>>
+        + getMonthlyTrend(): ResponseEntity<List<TrendData>>
+        + getTopViolations(): ResponseEntity<List<ViolationStats>>
+    }
+
+    class UserController {
+        + getProfile(id): ResponseEntity<UserProfileDto>
+        + updateProfile(id, request): ResponseEntity<UserDto>
+        + editProfile(id, EditProfileRequest): ResponseEntity<UserDto>
+    }
+
+    class MediaUploadController {
+        + uploadMedia(file): ResponseEntity<MediaUploadRequest>
+        + deleteMedia(id): ResponseEntity<?>
+    }
+
+    class StatsController {
+        + getStatistics(): ResponseEntity<StatsDto>
+    }
+
+    class ContraventionRecidivesController {
+        + getRecidivesByResident(id): ResponseEntity<List<RecidiveDto>>
+        + detectRecidivism(residentId): ResponseEntity<RecidiveAnalysis>
+    }
+
+    class ClasserSansSuiteController {
+        + classifyAsClosed(id): ResponseEntity<?>
+        + getClosedCases(): ResponseEntity<List<ContraventionDTO>>
+    }
+}
+
+package "Services" <<folder>> {
+    class AuthService {
+        - userRepository: UserRepository
+        - messageUtil: MessageUtil
+        + authenticateUser(email, password): AuthResponse
+        + registerUser(request): UserDto
+        + validateToken(token): boolean
+        + generateJWT(user): String
+        + resetPassword(email): void
+        + changePassword(userId, oldPwd, newPwd): void
+    }
+
+    class ContraventionService {
+        - repository: ContraventionRepository
+        - mediaRepository: MediaUploadRepository
+        + createContravention(request): ContraventionDto
+        + updateContraventionStatus(id, status): void
+        + getContravention(id): ContraventionDto
+        + listByResident(residentId): List<ContraventionDto>
+        + detectRecidivism(residentId): RecidiveAnalysis
+        + deleteContravention(id): void
+    }
+
+    class DashboardService {
+        - repository: DashboardRepository
+        + getDashboardStats(): DashboardStatsDto
+        + getMonthlyTrend(months): List<TrendData>
+        + getTopViolations(limit): List<ViolationStats>
+        + getRecidivismRate(): Double
+        + getUserPerformance(userId): PerformanceMetrics
+    }
+
+    class InvoicePdfService {
+        - factureRepository: FactureRepository
+        + generateInvoicePdf(contraventionId): byte[]
+        + createFacture(contravention, amount): Facture
+        + sendInvoiceEmail(factureId, email): void
+        + archiveInvoice(factureId): String
+    }
+
+    class EmailService {
+        + sendEmail(to, subject, body): void
+        + sendTemplateEmail(to, template, data): void
+        + sendPasswordReset(email, token): void
+    }
+
+    class ContraventionRecediveSevice {
+        - recidiveRepository: ContraventionRecidivesRepository
+        + trackRecidivism(residentId): RecidiveData
+        + calculateRecidivismRate(residentId): Double
+        + flagRecidivist(residentId): void
+    }
+
+    class ClasserSansSuiteService {
+        + classifyCaseAsClosed(contraventionId): void
+        + getClosedCases(): List<Contravention>
+        + reopenCase(contraventionId): void
+    }
+}
+
+package "Security" <<folder>> {
+    class JwtUtils {
+        - secretKey: String
+        - expirationTime: Long
+        + generateToken(userDetails): String
+        + extractUsername(token): String
+        + validateToken(token): boolean
+        + extractExpiration(token): Date
+    }
+
+    class JwtAuthenticationFilter {
+        + doFilterInternal(request, response, chain): void
+        - getJwtFromRequest(request): String
+        - validateJwtToken(token): boolean
+    }
+
+    class CustomUserDetailsService {
+        - userRepository: UserRepository
+        + loadUserByUsername(username): UserDetails
+    }
+}
+
+package "Repositories" <<folder>> {
+    interface UserRepository <<JpaRepository>> {
+        + findByEmail(email): Optional<User>
+        + findByRole(role): List<User>
+    }
+
+    interface ContraventionRepository <<JpaRepository>> {
+        + findByResident(resident): List<Contravention>
+        + findByStatut(statut): List<Contravention>
+        + findAll(pageable): Page<Contravention>
+    }
+
+    interface FactureRepository <<JpaRepository>> {
+        + findByStatus(status): List<Facture>
+        + findByInvoiceNumber(number): Optional<Facture>
+    }
+
+    interface ResidentRepository <<JpaRepository>> {
+        + findByEmail(email): Optional<Resident>
+        + findAll(): List<Resident>
+    }
+
+    interface ContraventionRecidivesRepository <<JpaRepository>> {
+        + findByResidentId(residentId): List<Recidive>
+    }
+
+    interface DashboardRepository <<JpaRepository>> {
+        + countByStatus(status): long
+        + getViolationStatistics(): List<Object[]>
+    }
+}
+
+package "Configuration" <<folder>> {
+    class SecurityConfig {
+        + filterChain(http): SecurityFilterChain
+        + passwordEncoder(): PasswordEncoder
+        + authenticationManager(config): AuthenticationManager
+    }
+
+    class I18nConfiguration {
+        + localeResolver(): LocaleResolver
+        + messageSource(): MessageSource
+    }
+
+    class CorsConfig {
+        + corsConfigurer(): WebMvcConfigurer
+    }
+
+    class ApplicationConfig {
+        + modelMapper(): ModelMapper
+        + restTemplate(): RestTemplate
+    }
+}
+
+package "Utilities" <<folder>> {
+    class MessageUtil {
+        - messageSource: MessageSource
+        + getMessage(key): String
+        + getMessage(key, args): String
+    }
+
+    class PasswordHashUtil {
+        + hashPassword(password): String
+        + verifyPassword(password, hash): boolean
+    }
+}
+
+' Relationships
+User "1" -- "*" Contravention: creates
+Resident "1" -- "*" Contravention: has
+ContraventionType "1" -- "*" Contravention: classifies
+Contravention "1" -- "*" ContraventionMedia: contains
+Contravention "1" -- "*" Facture: generates
+Contravention "1" -- "0..1" Recidive: may have
+Immeuble "1" -- "*" Chambre: contains
+
+' Service relationships
+AuthController --> AuthService
+ContraventionController --> ContraventionService
+DashboardController --> DashboardService
+UserController --> AuthService
+MediaUploadController --> ContraventionService
+StatsController --> DashboardService
+ContraventionRecidivesController --> ContraventionRecediveSevice
+ClasserSansSuiteController --> ClasserSansSuiteService
+
+' Service to Repository
+AuthService --> UserRepository
+ContraventionService --> ContraventionRepository
+DashboardService --> DashboardRepository
+InvoicePdfService --> FactureRepository
+ContraventionRecediveSevice --> ContraventionRecidivesRepository
+
+' Security
+AuthService --> JwtUtils
+JwtAuthenticationFilter --> JwtUtils
+SecurityConfig --> CustomUserDetailsService
+
+' Configuration
+SecurityConfig --> PasswordHashUtil
+I18nConfiguration --> MessageUtil
+
+' DTO relationships
+AuthController -.-> LoginRequest
+AuthController -.-> AuthResponseDto
+ContraventionController -.-> ContraventionDTO
+ContraventionController -.-> CreateContraventionRequest
+DashboardController -.-> DashboardStatsDto
+
+@enduml

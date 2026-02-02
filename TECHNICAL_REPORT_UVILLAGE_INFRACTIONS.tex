@@ -1,0 +1,1870 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf-8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english,french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{tikz-er2}
+\usepackage{float}
+
+\geometry{
+    left=1.5cm,
+    right=1.5cm,
+    top=2cm,
+    bottom=2cm
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{UVILLAGE Infractions Management System}
+\lhead{Technical Report}
+\cfoot{\thepage}
+
+\lstset{
+    language=Java,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{orange},
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=2,
+    backgroundcolor=\color{white},
+    frame=single
+}
+
+\title{
+    \textbf{UVILLAGE Infractions Management System}\\
+    \large Technical Documentation Report\\
+    \normalsize Version 1.0\\
+    \normalsize \today
+}
+
+\author{
+    Technical Architecture Documentation\\
+    Full-Stack Application Analysis
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\chapter{Executive Summary}
+
+\section{Project Overview}
+
+UVILLAGE Infractions Management System is a comprehensive web and mobile application designed to manage traffic infractions (contraventions) in residential communities. The system provides role-based access control, multilingual support (English/French), real-time dashboard analytics, and complete audit trails for compliance management.
+
+\subsection{Key Objectives}
+
+\begin{enumerate}
+    \item Streamline infraction documentation and management
+    \item Provide real-time analytics and reporting capabilities
+    \item Support multilingual interface (EN/FR)
+    \item Ensure data security with JWT authentication
+    \item Enable PDF invoice generation and management
+    \item Track infraction recidivism patterns
+    \item Maintain comprehensive audit history
+\end{enumerate}
+
+\subsection{Application Statistics}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Metric} & \textbf{Value} \\
+\hline
+Backend Controllers & 8 \\
+Database Entities & 9 \\
+Service Layers & 9 \\
+REST API Endpoints & 25+ \\
+DTOs & 16 \\
+Languages Supported & 2 (EN/FR) \\
+Security Protocols & JWT + Spring Security \\
+Database & MariaDB \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+
+\chapter{Technology Stack}
+
+\section{Backend Architecture}
+
+\subsection{Core Technologies}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Component} & \textbf{Technology} & \textbf{Version} \\
+\hline
+Framework & Spring Boot & 3.2.0 \\
+Language & Java & 17 \\
+Build Tool & Maven & 3.9.0+ \\
+Database Connector & MariaDB JDBC Client & Latest \\
+ORM & Spring Data JPA & 3.2.0 \\
+API Format & REST/JSON & - \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Key Dependencies}
+
+\subsubsection{Security}
+
+\begin{itemize}
+    \item \textbf{Spring Security}: Authentication and authorization framework
+    \item \textbf{JWT (jjwt)}: JSON Web Token implementation (v0.11.5)
+    \item \textbf{Lombok}: Annotation processor for boilerplate reduction
+\end{itemize}
+
+\subsubsection{Data Processing}
+
+\begin{itemize}
+    \item \textbf{Spring Data JPA}: Database abstraction layer
+    \item \textbf{MapStruct}: DTO mapping and transformation (v1.5.5)
+    \item \textbf{Spring Validation}: Input validation framework
+\end{itemize}
+
+\subsubsection{Document Generation}
+
+\begin{itemize}
+    \item \textbf{iTextPDF}: PDF generation library (v5.5.13.3)
+\end{itemize}
+
+\subsubsection{Communication}
+
+\begin{itemize}
+    \item \textbf{Spring Mail}: Email service integration
+\end{itemize}
+
+\subsubsection{Internationalization}
+
+\begin{itemize}
+    \item \textbf{Spring i18n}: Multilingual message support
+    \item \textbf{MessageSource}: Property-based resource bundles
+\end{itemize}
+
+\section{Frontend Architecture}
+
+\subsection{Primary Stack}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Framework} & \textbf{Technology} \\
+\hline
+Web Frontend & Next.js 16 \\
+UI Framework & React 19 \\
+Styling & Tailwind CSS 3.4 \\
+State Management & Riverpod (Flutter components) \\
+Component Library & shadcn/ui \\
+Charts & Recharts 2.15 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{UI Component Framework}
+
+\begin{itemize}
+    \item \textbf{shadcn/ui}: Modern accessible component library
+    \item \textbf{Radix UI}: Primitive components (40+ components)
+    \item \textbf{Lucide React}: Icon system
+    \item \textbf{React Hook Form}: Form state management
+    \item \textbf{Zod}: TypeScript-first schema validation
+\end{itemize}
+
+\section{Database Technology}
+
+\subsection{DBMS Specifications}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Property} & \textbf{Value} \\
+\hline
+Database Management System & MariaDB \\
+Compatibility & MySQL compatible \\
+Connection Protocol & JDBC \\
+ORM Framework & Spring Data JPA \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+
+\chapter{System Architecture}
+
+\section{High-Level Architecture}
+
+\subsection{Three-Tier Architecture}
+
+\begin{verbatim}
+┌──────────────────────────────────────────────────────────┐
+│                 PRESENTATION LAYER                        │
+│  (React/Next.js Frontend - Dashboard, Forms, Reports)    │
+└────────────────┬─────────────────────────────────────────┘
+                 │ HTTP/HTTPS REST API
+                 │
+┌────────────────▼─────────────────────────────────────────┐
+│              APPLICATION LAYER                           │
+│  (Spring Boot Controllers, Services, Business Logic)     │
+└────────────────┬─────────────────────────────────────────┘
+                 │ JDBC
+                 │
+┌────────────────▼─────────────────────────────────────────┐
+│              DATA LAYER                                  │
+│  (MariaDB - Tables, Relationships, Indexes)             │
+└──────────────────────────────────────────────────────────┘
+\end{verbatim}
+
+\section{Architectural Patterns}
+
+\subsection{Design Patterns Implemented}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Pattern} & \textbf{Usage} & \textbf{Benefit} \\
+\hline
+MVC & Controllers/Services & Clear separation of concerns \\
+Repository & DAO Layer & Data access abstraction \\
+DTO & Data Transfer Objects & Decoupling & DTOs from entities \\
+Dependency Injection & Spring Framework & Loose coupling \\
+Factory & Spring Beans & Object creation \\
+Strategy & Service implementations & Algorithm selection \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Component Breakdown}
+
+\subsection{Backend Components}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|p{6cm}|l|}
+\hline
+\textbf{Component} & \textbf{Responsibility} & \textbf{Type} \\
+\hline
+AuthController & User authentication endpoints & REST Controller \\
+ContraventionController & Infraction management CRUD & REST Controller \\
+DashboardController & Analytics and statistics & REST Controller \\
+UserController & User profile management & REST Controller \\
+MediaUploadController & File upload handling & REST Controller \\
+\hline
+AuthService & Authentication logic & Service \\
+ContraventionService & Infraction business logic & Service \\
+EmailService & Email notifications & Service \\
+InvoicePdfService & PDF generation & Service \\
+\hline
+ContraventionRepository & Infraction data access & Repository \\
+UserRepository & User data access & Repository \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+
+\chapter{Database Design}
+
+\section{Entity-Relationship Model}
+
+\subsection{Core Entities}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|p{4cm}|l|}
+\hline
+\textbf{Entity} & \textbf{Purpose} & \textbf{Records} \\
+\hline
+User & System users (admins, officers) & N \\
+Resident & Community residents & N \\
+Contravention & Infraction records & N \\
+ContraventionType & Infraction classification & ~20 \\
+ContraventionMedia & Photos/evidence & N \\
+Facture & Invoice generation & N \\
+PasswordResetToken & Password recovery & N \\
+Recidive & Repeat violation tracking & N \\
+Immeuble & Building information & N \\
+Chambre & Unit/Chamber data & N \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Relationships}
+
+\begin{verbatim}
+User (1) ──────────→ (N) Contravention
+        │ Creates infractions
+        
+Resident (1) ────────→ (N) Contravention
+         │ May be involved in
+
+ContraventionType (1) ─→ (N) Contravention
+                 │ Classifies
+
+Contravention (1) ────→ (N) ContraventionMedia
+           │ Contains evidence
+
+Contravention (1) ────→ (N) Facture
+           │ Generates invoice
+
+Contravention (1) ────→ (1) Recidive
+           └─ May have repeat violation
+\end{verbatim}
+
+\section{Key Tables Description}
+
+\subsection{User Table}
+
+\begin{verbatim}
+Columns:
+- id (BIGINT, PRIMARY KEY)
+- email (VARCHAR, UNIQUE, NOT NULL)
+- password_hash (VARCHAR, NOT NULL)
+- first_name (VARCHAR)
+- last_name (VARCHAR)
+- role (ENUM: ADMIN, OFFICER, VIEWER)
+- is_active (BOOLEAN, DEFAULT: true)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+\end{verbatim}
+
+\subsection{Contravention Table}
+
+\begin{verbatim}
+Columns:
+- id (BIGINT, PRIMARY KEY)
+- user_id (BIGINT, FOREIGN KEY → User)
+- resident_id (BIGINT, FOREIGN KEY → Resident)
+- contravention_type_id (BIGINT, FK → ContraventionType)
+- statut (ENUM: PENDING, RESOLVED, APPEALED)
+- date_infraction (DATE, NOT NULL)
+- description (TEXT)
+- location (VARCHAR)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+\end{verbatim}
+
+\subsection{Facture (Invoice) Table}
+
+\begin{verbatim}
+Columns:
+- id (BIGINT, PRIMARY KEY)
+- contravention_id (BIGINT, FK → Contravention)
+- invoice_number (VARCHAR, UNIQUE)
+- amount (DECIMAL(10,2))
+- status (ENUM: DRAFT, ISSUED, PAID, OVERDUE)
+- due_date (DATE)
+- pdf_path (VARCHAR)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+\end{verbatim}
+
+\newpage
+
+\chapter{Security Architecture}
+
+\section{Authentication \& Authorization}
+
+\subsection{JWT-Based Authentication}
+
+\begin{verbatim}
+Flow:
+1. User submits credentials (email/password)
+2. AuthService validates against database
+3. JwtUtils generates JWT token containing:
+   - Subject (user email)
+   - Claims (user roles, permissions)
+   - Expiration time (typically 24 hours)
+4. Token returned to client
+5. Client includes token in Authorization header
+6. JwtAuthenticationFilter validates token
+7. User granted access if token valid
+
+Token Structure:
+Header.Payload.Signature
+
+Header:
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+
+Payload:
+{
+  "sub": "user@example.com",
+  "iat": 1704067200,
+  "exp": 1704153600,
+  "roles": ["ADMIN"]
+}
+\end{verbatim}
+
+\subsection{Authorization Levels}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Role} & \textbf{Permissions} & \textbf{Usage} \\
+\hline
+ADMIN & All operations & System administrator \\
+OFFICER & Create/update infractions & Law enforcement \\
+VIEWER & Read-only access & Reporting users \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Data Protection}
+
+\subsection{Password Security}
+
+\begin{itemize}
+    \item \textbf{Hashing Algorithm}: BCrypt with configurable salt rounds
+    \item \textbf{Storage}: Hashed passwords never stored in plain text
+    \item \textbf{Validation}: PasswordHashUtil class handles verification
+\end{itemize}
+
+\subsection{API Security}
+
+\begin{itemize}
+    \item \textbf{CORS Configuration}: Restricted origins
+    \item \textbf{CSRF Protection}: Token-based validation
+    \item \textbf{SSL/TLS}: HTTPS enforcement in production
+    \item \textbf{Rate Limiting}: Endpoint throttling capability
+\end{itemize}
+
+\section{Security Configuration}
+
+The SecurityConfig class implements Spring Security with:
+
+\begin{verbatim}
+- HTTP Security:
+  * Form login configuration
+  * Logout handling
+  * Session management
+  * CSRF protection
+
+- JWT Filter Chain:
+  * JwtAuthenticationFilter validates tokens
+  * Runs before UsernamePasswordAuthenticationFilter
+  * Extracts JWT from Authorization header
+  * Sets security context for request
+
+- Password Encoding:
+  * BCryptPasswordEncoder bean
+  * Custom PasswordHashUtil implementation
+\end{verbatim}
+
+\newpage
+
+\chapter{API Endpoints Documentation}
+
+\section{Authentication Endpoints}
+
+\subsection{POST /api/auth/login}
+
+\begin{verbatim}
+Purpose: User authentication
+Method: POST
+URL: /api/auth/login
+Content-Type: application/json
+
+Request Body:
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+
+Response (200 OK):
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "email": "user@example.com",
+  "message": "Login successful"
+}
+
+Error Response (401 Unauthorized):
+{
+  "error": "Invalid credentials",
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+
+Security: None (public endpoint)
+Rate Limit: 5 requests per minute
+\end{verbatim}
+
+\subsection{POST /api/auth/register}
+
+\begin{verbatim}
+Purpose: Create new user account
+Method: POST
+Content-Type: application/json
+
+Request Body:
+{
+  "email": "newuser@example.com",
+  "password": "securePassword123",
+  "firstName": "Jean",
+  "lastName": "Dupont",
+  "role": "OFFICER"
+}
+
+Response (201 Created):
+{
+  "id": 1,
+  "email": "newuser@example.com",
+  "message": "User created successfully"
+}
+
+Validation:
+- Email format validation
+- Password minimum 8 characters
+- Email uniqueness check
+- Role must be valid ENUM
+
+Security: Admin only
+\end{verbatim}
+
+\section{Contravention Management Endpoints}
+
+\subsection{GET /api/contraventions}
+
+\begin{verbatim}
+Purpose: Retrieve all infractions
+Method: GET
+Query Parameters:
+  - page: int (default: 0)
+  - size: int (default: 20)
+  - statut: PENDING|RESOLVED|APPEALED
+  - sortBy: id|dateInfraction|createdAt
+
+Response (200 OK):
+{
+  "content": [
+    {
+      "id": 1,
+      "residentName": "Ahmed Hassan",
+      "infractionType": "Speeding",
+      "date": "2024-01-15",
+      "statut": "PENDING",
+      "location": "Avenue Mohammed V"
+    }
+  ],
+  "totalElements": 156,
+  "totalPages": 8,
+  "currentPage": 0
+}
+
+Security: Requires JWT token
+Roles: ADMIN, OFFICER, VIEWER
+\end{verbatim}
+
+\subsection{POST /api/contraventions}
+
+\begin{verbatim}
+Purpose: Create new infraction record
+Method: POST
+Content-Type: application/json
+
+Request Body:
+{
+  "residentId": 42,
+  "contraventionTypeId": 5,
+  "dateInfraction": "2024-01-15",
+  "description": "Parking violation in restricted zone",
+  "location": "Corner of Street A and B",
+  "photosUrls": ["photo1.jpg", "photo2.jpg"]
+}
+
+Response (201 Created):
+{
+  "id": 234,
+  "message": "Infraction recorded successfully",
+  "infractionNumber": "INFRA-2024-000234"
+}
+
+Validation:
+- Resident must exist
+- Type must be valid
+- Date cannot be future
+- Description required
+
+Security: Requires JWT token
+Roles: ADMIN, OFFICER
+\end{verbatim}
+
+\section{Dashboard Endpoints}
+
+\subsection{GET /api/dashboard/stats}
+
+\begin{verbatim}
+Purpose: Retrieve dashboard statistics
+Method: GET
+
+Response (200 OK):
+{
+  "totalInfractions": 1524,
+  "pendingCount": 156,
+  "resolvedCount": 1368,
+  "totalFines": 125400.00,
+  "recidivismRate": 12.5,
+  "topViolationTypes": [
+    {
+      "type": "Speeding",
+      "count": 456
+    },
+    {
+      "type": "Parking",
+      "count": 398
+    }
+  ],
+  "monthlyTrend": [
+    {
+      "month": "2024-01",
+      "count": 123
+    }
+  ]
+}
+
+Security: Requires JWT token
+Roles: ADMIN, OFFICER, VIEWER
+\end{verbatim}
+
+\newpage
+
+\chapter{Internationalization (i18n) System}
+
+\section{Multi-Language Support}
+
+\subsection{Supported Languages}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Language} & \textbf{Locale Code} & \textbf{Status} \\
+\hline
+English & en\_US & Fully Implemented \\
+French & fr\_FR & Fully Implemented \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Frontend Implementation (Flutter/React)}
+
+\begin{verbatim}
+Translation Files:
+- frontend/lib/l10n/app_en.arb (40+ strings)
+- frontend/lib/l10n/app_fr.arb (40+ strings)
+
+File Format: ARB (Application Resource Bundle)
+
+Example app_en.arb:
+{
+  "welcome": "Welcome",
+  "signIn": "Sign In",
+  "signUp": "Sign Up",
+  "forgotPassword": "Forgot Password?"
+}
+
+Example app_fr.arb:
+{
+  "welcome": "Bienvenue",
+  "signIn": "Connexion",
+  "signUp": "Créer un compte",
+  "forgotPassword": "Mot de passe oublié?"
+}
+
+Usage in Flutter:
+final localizations = AppLocalizations.of(context);
+Text(localizations.welcome)
+\end{verbatim}
+
+\subsection{Backend Implementation}
+
+\begin{verbatim}
+Translation Files:
+- backend/src/main/resources/messages.properties (English)
+- backend/src/main/resources/messages_fr.properties (French)
+
+File Format: Java Properties
+
+Example messages.properties:
+user.login.success=Login successful
+user.login.failed=Invalid credentials
+error.email.exists=Email already exists
+
+Example messages_fr.properties:
+user.login.success=Connexion réussie
+user.login.failed=Identifiants invalides
+error.email.exists=Email déjà utilisé
+
+Spring Configuration:
+@Configuration
+public class I18nConfiguration {
+    @Bean
+    public LocaleResolver localeResolver() {
+        AcceptHeaderLocaleResolver resolver = 
+            new AcceptHeaderLocaleResolver();
+        resolver.setDefaultLocale(Locale.ENGLISH);
+        return resolver;
+    }
+    
+    @Bean
+    public MessageSource messageSource() {
+        ResourceBundleMessageSource source = 
+            new ResourceBundleMessageSource();
+        source.setBasename("messages");
+        source.setDefaultEncoding("UTF-8");
+        return source;
+    }
+}
+
+Usage in Services:
+@Component
+public class MessageUtil {
+    @Autowired
+    private MessageSource messageSource;
+    
+    public String getMessage(String key) {
+        Locale locale = 
+            LocaleContextHolder.getLocale();
+        return messageSource.getMessage(key, 
+            null, locale);
+    }
+}
+\end{verbatim}
+
+\section{Language Selection Flow}
+
+\begin{verbatim}
+Client Side:
+1. User clicks language switcher
+2. Frontend updates language state
+3. AppLocalizations re-renders UI
+4. Accept-Language header added to API requests
+
+Server Side:
+1. REST API receives Accept-Language header
+2. AcceptHeaderLocaleResolver extracts locale
+3. LocaleContextHolder.setLocale(locale)
+4. Services access locale via LocaleContextHolder
+5. MessageSource retrieves translated message
+6. Response returned with translated content
+\end{verbatim}
+
+\newpage
+
+\chapter{Development & Deployment}
+
+\section{Build Configuration}
+
+\subsection{Maven Build}
+
+\begin{verbatim}
+Project: com.uvillage:infractions:0.0.1-SNAPSHOT
+
+Build Lifecycle:
+mvn clean compile
+mvn package
+mvn install
+mvn spring-boot:run
+
+Key Profiles:
+- dev: Development configuration
+- prod: Production configuration
+- test: Test configuration
+
+Build Output:
+- Target JAR: infractions-0.0.1-SNAPSHOT.jar
+- Size: ~50-80 MB (with dependencies)
+\end{verbatim}
+
+\subsection{Compilation Configuration}
+
+\begin{verbatim}
+Compiler Settings:
+- Source/Target: Java 17
+- Encoding: UTF-8
+- Annotation Processors:
+  * Lombok (annotation processing)
+  * MapStruct (DTO mapping)
+
+Plugins:
+- Spring Boot Maven Plugin
+- Maven Compiler Plugin (3.11.0)
+- Spring Boot Plugin
+
+Environment:
+- Maven Version: 3.8.1+
+- Java Version: 17+
+- Memory: 2GB minimum recommended
+\end{verbatim}
+
+\section{Deployment Architecture}
+
+\subsection{Production Deployment}
+
+\begin{verbatim}
+Infrastructure:
+┌─────────────────────────────────────┐
+│         Load Balancer               │
+│    (HTTPS/SSL Termination)          │
+└────────────┬────────────────────────┘
+             │
+    ┌────────┴────────┐
+    │                 │
+┌───▼──┐         ┌───▼──┐
+│ App  │         │ App  │
+│ Server 1│     │ Server 2│
+│(Port 8080)│ (Port 8080)
+└───┬──┘         └───┬──┘
+    │                 │
+    └────────┬────────┘
+             │
+        ┌────▼─────┐
+        │ Database │
+        │ (MariaDB)│
+        │ Replica  │
+        └──────────┘
+\end{verbatim}
+
+\subsection{Environment Configuration}
+
+\begin{verbatim}
+Application Properties (application.properties):
+
+Server Configuration:
+server.port=8080
+server.servlet.context-path=/api
+server.compression.enabled=true
+
+Database Connection:
+spring.datasource.url=jdbc:mariadb://localhost:3306/infractions
+spring.datasource.username=root
+spring.datasource.password=password
+spring.jpa.hibernate.ddl-auto=validate
+
+JWT Configuration:
+app.jwt.secret=your-secret-key-here
+app.jwt.expiration=86400000
+
+Email Service:
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your-email@gmail.com
+spring.mail.password=app-password
+
+Internationalization:
+spring.messages.basename=messages
+spring.messages.encoding=UTF-8
+
+Logging:
+logging.level.root=INFO
+logging.level.com.uvillage=DEBUG
+logging.file.name=logs/application.log
+\end{verbatim}
+
+\newpage
+
+\chapter{API Data Flow Diagrams}
+
+\section{User Login Flow}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=1, every node/.style={draw, rectangle, minimum width=2cm, minimum height=0.8cm}]
+
+\node (client) at (0, 3) {Client};
+\node (auth) at (0, 2) {AuthController};
+\node (service) at (0, 1) {AuthService};
+\node (repo) at (0, 0) {UserRepository};
+\node (db) at (0, -1) {MariaDB};
+
+\draw[->, thick] (client) -- (auth);
+\draw[->, thick] (auth) -- (service);
+\draw[->, thick] (service) -- (repo);
+\draw[->, thick] (repo) -- (db);
+\draw[<-, thick] (db) -- (repo);
+\draw[<-, thick] (repo) -- (service);
+\draw[<-, thick] (service) -- (auth);
+\draw[<-, thick] (auth) -- (client);
+
+\end{tikzpicture}
+\caption{Login Flow - Component Interaction}
+\end{figure}
+
+\section{Infraction Creation Flow}
+
+\begin{verbatim}
+Sequence Diagram:
+
+Client Request
+    │
+    ├─ POST /api/contraventions
+    │  Header: Authorization: Bearer {JWT}
+    │  Body: ContraventionDTO
+    │
+    └──► ContraventionController
+         │
+         ├─ Validates JWT token
+         │
+         ├─ Validates ContraventionDTO
+         │  └─ Check resident exists
+         │  └─ Check type valid
+         │  └─ Validate date
+         │
+         └──► ContraventionService
+              │
+              ├─ Create Contravention entity
+              │
+              ├─ Save to database
+              │ └──► ContraventionRepository
+              │      └──► MariaDB
+              │
+              ├─ Create ContraventionMedia (if photos)
+              │
+              ├─ Emit audit log event
+              │
+              └──► Response 201 Created
+                   └──► Client receives:
+                       - ID: 234
+                       - Number: INFRA-2024-000234
+                       - Status: CREATED
+\end{verbatim}
+
+\section{Dashboard Statistics Flow}
+
+\begin{verbatim}
+Analytics Query Flow:
+
+Client Request
+    │
+    └──► GET /api/dashboard/stats
+         │
+         ├─ DashboardController
+         │
+         └──► DashboardService
+              │
+              ├─ Query 1: COUNT infractions by status
+              │  └──► SQL: SELECT status, COUNT(*) FROM contraventions
+              │        GROUP BY status
+              │
+              ├─ Query 2: SUM all fines
+              │  └──► SQL: SELECT SUM(amount) FROM factures
+              │        WHERE status = 'PAID'
+              │
+              ├─ Query 3: Calculate recidivism rate
+              │  └──► SQL: SELECT COUNT(DISTINCT resident_id)
+              │        FROM contraventions WHERE resident_id IN
+              │        (SELECT resident_id FROM contraventions
+              │         GROUP BY resident_id HAVING COUNT(*) > 1)
+              │
+              ├─ Query 4: Top violations
+              │  └──► SQL: SELECT type, COUNT(*) FROM contraventions
+              │        GROUP BY type ORDER BY COUNT(*) DESC LIMIT 10
+              │
+              └──► Response 200 OK
+                   └──► Client receives aggregated analytics
+\end{verbatim}
+
+\newpage
+
+\chapter{Database Schema}
+
+\section{Entity Definition Diagrams}
+
+\subsection{User Entity}
+
+\begin{verbatim}
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true, nullable = false)
+    private String email;
+    
+    @Column(nullable = false)
+    private String passwordHash;
+    
+    private String firstName;
+    private String lastName;
+    
+    @Enumerated(EnumType.STRING)
+    private UserRole role; // ADMIN, OFFICER, VIEWER
+    
+    @Column(nullable = false)
+    private Boolean isActive = true;
+    
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+    
+    // One-to-Many: One user creates many contraventions
+    @OneToMany(mappedBy = "user")
+    private List<Contravention> contraventions;
+}
+\end{verbatim}
+
+\subsection{Contravention Entity}
+
+\begin{verbatim}
+@Entity
+@Table(name = "contraventions")
+public class Contravention {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+    
+    @ManyToOne
+    @JoinColumn(name = "resident_id")
+    private Resident resident;
+    
+    @ManyToOne
+    @JoinColumn(name = "type_id")
+    private ContraventionType type;
+    
+    @Enumerated(EnumType.STRING)
+    private StatutContravention statut;
+    
+    @Column(nullable = false)
+    private LocalDate dateInfraction;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    
+    private String location;
+    
+    @OneToMany(mappedBy = "contravention", cascade = CascadeType.ALL)
+    private List<ContraventionMedia> media;
+    
+    @OneToOne(mappedBy = "contravention")
+    private Recidive recidive;
+    
+    @OneToMany(mappedBy = "contravention")
+    private List<Facture> factures;
+    
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+}
+\end{verbatim}
+
+\subsection{Facture (Invoice) Entity}
+
+\begin{verbatim}
+@Entity
+@Table(name = "factures")
+public class Facture {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne
+    @JoinColumn(name = "contravention_id")
+    private Contravention contravention;
+    
+    @Column(unique = true, nullable = false)
+    private String invoiceNumber;
+    
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal amount;
+    
+    @Enumerated(EnumType.STRING)
+    private InvoiceStatus status; // DRAFT, ISSUED, PAID, OVERDUE
+    
+    private LocalDate dueDate;
+    
+    private String pdfPath;
+    
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+}
+\end{verbatim}
+
+\section{SQL Indexes}
+
+\begin{verbatim}
+Performance Optimization Indexes:
+
+1. User Lookups:
+   CREATE INDEX idx_user_email ON users(email);
+   CREATE INDEX idx_user_role ON users(role);
+
+2. Contravention Queries:
+   CREATE INDEX idx_contravention_user ON contraventions(user_id);
+   CREATE INDEX idx_contravention_resident ON contraventions(resident_id);
+   CREATE INDEX idx_contravention_status ON contraventions(statut);
+   CREATE INDEX idx_contravention_date ON contraventions(dateInfraction);
+
+3. Invoice Lookups:
+   CREATE INDEX idx_facture_contravention ON factures(contravention_id);
+   CREATE INDEX idx_facture_status ON factures(status);
+   CREATE INDEX idx_facture_duedate ON factures(dueDate);
+
+4. Recidivism Tracking:
+   CREATE INDEX idx_recidive_resident ON recidives(resident_id);
+
+5. Full-Text Search:
+   CREATE INDEX idx_description_fulltext ON contraventions(description);
+\end{verbatim}
+
+\newpage
+
+\chapter{Service Layer Architecture}
+
+\section{Service Classes}
+
+\subsection{AuthService}
+
+\begin{verbatim}
+Responsibilities:
+- User authentication and registration
+- Password validation and hashing
+- JWT token generation and validation
+- Email verification
+- Password reset handling
+
+Key Methods:
+- authenticateUser(String email, String password): AuthResponse
+- registerUser(CreateAccountRequest request): UserDto
+- validateToken(String token): boolean
+- generateJWT(User user): String
+- resetPassword(String email): void
+- changePassword(Long userId, String oldPwd, String newPwd): void
+\end{verbatim}
+
+\subsection{ContraventionService}
+
+\begin{verbatim}
+Responsibilities:
+- CRUD operations for infractions
+- Contravention status management
+- Recidivism tracking and detection
+- Media attachment handling
+- Audit trail management
+
+Key Methods:
+- createContravention(CreateContraventionRequest req): ContraventionDto
+- updateContraventionStatus(Long id, StatutContravention status): void
+- getContravention(Long id): ContraventionDto
+- listByResident(Long residentId): List<ContraventionDto>
+- detectRecidivism(Long residentId): RecidiveAnalysis
+- deleteContravention(Long id): void
+\end{verbatim}
+
+\subsection{DashboardService}
+
+\begin{verbatim}
+Responsibilities:
+- Aggregate statistics computation
+- Trend analysis
+- Violation pattern detection
+- Performance metrics calculation
+
+Key Methods:
+- getDashboardStats(): DashboardStatsDto
+- getMonthlyTrend(Integer months): List<TrendData>
+- getTopViolations(Integer limit): List<ViolationStats>
+- getRecidivismRate(): Double
+- getUserPerformance(Long userId): PerformanceMetrics
+- generateReport(ReportRequest req): ReportDto
+\end{verbatim}
+
+\subsection{InvoicePdfService}
+
+\begin{verbatim}
+Responsibilities:
+- PDF document generation
+- Invoice formatting
+- Document signing and validation
+- Archive storage
+
+Key Methods:
+- generateInvoicePdf(Long contraventionId): byte[]
+- createFacture(Contravention c, BigDecimal amount): Facture
+- sendInvoiceEmail(Long factureId, String email): void
+- archiveInvoice(Long factureId): String
+- updateFactureStatus(Long id, InvoiceStatus status): void
+\end{verbatim}
+
+\section{Repository Layer}
+
+\begin{verbatim}
+Repository Interfaces (Spring Data JPA):
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+    List<User> findByRole(UserRole role);
+}
+
+@Repository
+public interface ContraventionRepository 
+    extends JpaRepository<Contravention, Long> {
+    List<Contravention> findByResident(Resident resident);
+    List<Contravention> findByStatut(StatutContravention statut);
+    Page<Contravention> findAll(Pageable pageable);
+    long countByStatut(StatutContravention statut);
+}
+
+@Repository
+public interface DashboardRepository extends JpaRepository<Contravention, Long> {
+    @Query("SELECT COUNT(c) FROM Contravention c WHERE c.statut = ?1")
+    long countByStatus(StatutContravention status);
+    
+    @Query(nativeQuery = true)
+    List<Object[]> getViolationStatistics();
+}
+
+@Repository
+public interface FactureRepository extends JpaRepository<Facture, Long> {
+    List<Facture> findByStatus(InvoiceStatus status);
+    Optional<Facture> findByInvoiceNumber(String number);
+}
+\end{verbatim}
+
+\newpage
+
+\chapter{Error Handling \& Validation}
+
+\section{Exception Handling}
+
+\subsection{Custom Exception Classes}
+
+\begin{verbatim}
+public class UvillageException extends RuntimeException {
+    private String errorCode;
+    private int httpStatus;
+    
+    public UvillageException(String msg, String code, int status) {
+        super(msg);
+        this.errorCode = code;
+        this.httpStatus = status;
+    }
+}
+
+Specific Exceptions:
+- UserNotFoundException: 404
+- InvalidCredentialsException: 401
+- ContraventionNotFoundException: 404
+- DuplicateEmailException: 409
+- UnauthorizedException: 403
+- ValidationException: 400
+\end{verbatim}
+
+\subsection{Global Exception Handler}
+
+\begin{verbatim}
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(
+        UserNotFoundException ex) {
+        return ResponseEntity.status(404)
+            .body(new ErrorResponse("User not found", 404));
+    }
+    
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(
+        InvalidCredentialsException ex) {
+        return ResponseEntity.status(401)
+            .body(new ErrorResponse("Invalid credentials", 401));
+    }
+    
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationErrors(
+        MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(e ->
+            errors.put(e.getField(), e.getDefaultMessage())
+        );
+        return ResponseEntity.status(400)
+            .body(new ValidationErrorResponse("Validation failed", errors));
+    }
+}
+\end{verbatim}
+
+\section{Input Validation}
+
+\subsection{DTO Validation Annotations}
+
+\begin{verbatim}
+@Data
+public class CreateContraventionRequest {
+    @NotNull(message = "Resident ID required")
+    private Long residentId;
+    
+    @NotNull(message = "Type ID required")
+    private Long typeId;
+    
+    @NotNull(message = "Date required")
+    @PastOrPresent(message = "Date cannot be future")
+    private LocalDate dateInfraction;
+    
+    @NotBlank(message = "Description required")
+    @Length(min = 10, max = 1000, 
+        message = "Description must be 10-1000 characters")
+    private String description;
+    
+    @NotBlank(message = "Location required")
+    private String location;
+    
+    private List<String> mediaUrls;
+}
+
+Validation Pipeline:
+1. Controller receives DTO
+2. @Valid annotation triggers validation
+3. JSR 303 Bean Validation processes
+4. Custom validators execute
+5. If invalid: 400 Bad Request returned
+6. Error details provided in response
+\end{verbatim}
+
+\newpage
+
+\chapter{Performance Optimization}
+
+\section{Database Optimization}
+
+\subsection{Query Optimization Strategies}
+
+\begin{verbatim}
+1. Eager Loading with @Query:
+   @Query("SELECT c FROM Contravention c " +
+          "LEFT JOIN FETCH c.media " +
+          "WHERE c.id = ?1")
+   Optional<Contravention> findByIdWithMedia(Long id);
+
+2. Pagination for Large Result Sets:
+   Page<Contravention> page = 
+       repository.findAll(PageRequest.of(0, 20));
+
+3. Database Indexes (as defined in schema):
+   - Email indexes for fast lookups
+   - Foreign key indexes for joins
+   - Status/date indexes for filtering
+
+4. Named Queries for Complex Searches:
+   @NamedQuery(name = "Contravention.findRecidivists",
+               query = "SELECT r FROM Resident r " +
+                       "WHERE SIZE(r.contraventions) > 5")
+\end{verbatim}
+
+\subsection{Connection Pooling}
+
+\begin{verbatim}
+HikariCP Configuration (Spring default):
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.idle-timeout=600000
+spring.datasource.hikari.max-lifetime=1800000
+
+Benefits:
+- Connection reuse
+- Reduced overhead
+- Better resource utilization
+- Thread safety
+\end{verbatim}
+
+\section{Caching Strategy}
+
+\begin{verbatim}
+Implemented Cache Layers:
+
+1. Database Level:
+   - Query result caching (if JPA 2nd level cache)
+   - Index-based lookups
+
+2. Application Level:
+   - Spring @Cacheable on service methods
+   - Cache invalidation with @CacheEvict
+   - Example: Cache user lookups by email
+
+3. Frontend Level:
+   - Browser localStorage for session data
+   - Service worker caching for offline capability
+
+Cache Invalidation Triggers:
+- Data modification operations
+- Time-based expiration
+- Manual cache clear via admin endpoint
+\end{verbatim}
+
+\section{API Response Optimization}
+
+\begin{verbatim}
+1. Compression:
+   server.compression.enabled=true
+   Reduces response size by 60-80%
+
+2. Lazy Loading DTOs:
+   - Return only essential fields
+   - Use projection DTOs for lists
+   - Include related data only when needed
+
+3. Response Pagination:
+   - Limit default page size to 20
+   - Enforce maximum 100 per page
+
+4. Async Processing:
+   - Long-running tasks use @Async
+   - Email notifications via message queue
+   - PDF generation in background
+\end{verbatim}
+
+\newpage
+
+\chapter{Testing Architecture}
+
+\section{Test Coverage}
+
+\subsection{Unit Testing}
+
+\begin{verbatim}
+Test Framework: JUnit 5 + Mockito
+
+Example Unit Test:
+@ExtendWith(MockitoExtension.class)
+public class AuthServiceTest {
+    
+    @Mock
+    private UserRepository userRepository;
+    
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    
+    @InjectMocks
+    private AuthService authService;
+    
+    @Test
+    public void testAuthenticateUserSuccess() {
+        // Arrange
+        User user = new User();
+        user.setEmail("test@example.com");
+        user.setPasswordHash("hashedPwd");
+        
+        when(userRepository.findByEmail("test@example.com"))
+            .thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password", "hashedPwd"))
+            .thenReturn(true);
+        
+        // Act
+        AuthResponse response = authService.authenticateUser(
+            "test@example.com", "password");
+        
+        // Assert
+        assertNotNull(response.getToken());
+        assertEquals("test@example.com", response.getEmail());
+    }
+    
+    @Test
+    public void testAuthenticateUserInvalidCredentials() {
+        // Arrange
+        when(userRepository.findByEmail("test@example.com"))
+            .thenReturn(Optional.empty());
+        
+        // Act & Assert
+        assertThrows(InvalidCredentialsException.class, () ->
+            authService.authenticateUser("test@example.com", "password")
+        );
+    }
+}
+\end{verbatim}
+
+\subsection{Integration Testing}
+
+\begin{verbatim}
+Test Framework: Spring Boot Test + TestRestTemplate
+
+Example Integration Test:
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+public class ContraventionControllerIT {
+    
+    @Autowired
+    private TestRestTemplate restTemplate;
+    
+    @Autowired
+    private ContraventionRepository repository;
+    
+    @Test
+    public void testGetContravention() {
+        // Arrange
+        Contravention saved = repository.save(
+            new Contravention(...));
+        
+        // Act
+        ResponseEntity<ContraventionDto> response = 
+            restTemplate.getForEntity(
+                "/api/contraventions/" + saved.getId(),
+                ContraventionDto.class);
+        
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertNotNull(response.getBody());
+    }
+}
+\end{verbatim}
+
+\section{Test Database}
+
+\begin{verbatim}
+Test Configuration (application-test.properties):
+
+# Use H2 in-memory database for tests
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driver-class-name=org.h2.Driver
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=create-drop
+
+# Disable logging in tests
+logging.level.root=WARN
+
+Test Database Benefits:
+- Isolated from production data
+- Fast test execution
+- Automatic cleanup between tests
+- Parallel test execution support
+\end{verbatim}
+
+\newpage
+
+\chapter{Monitoring \& Logging}
+
+\section{Logging Configuration}
+
+\subsection{Log Levels}
+
+\begin{verbatim}
+Application Logging Levels:
+
+Root Level: INFO
+com.uvillage.infractions: DEBUG
+org.springframework.web: INFO
+org.springframework.security: DEBUG
+org.hibernate.SQL: DEBUG (dev only)
+
+Log Output:
+- File: logs/application.log (daily rotation)
+- Console: INFO level
+- File: logs/errors.log (errors only)
+
+Log Format:
+[%d{yyyy-MM-dd HH:mm:ss}] [%-5p] [%c{1}] - %m%n
+
+Example Log Output:
+[2024-01-15 14:23:45] [INFO] [AuthController] - User login attempt: user@example.com
+[2024-01-15 14:23:46] [DEBUG] [AuthService] - Password validation passed
+[2024-01-15 14:23:46] [INFO] [JwtUtils] - JWT token generated for user@example.com
+[2024-01-15 14:23:46] [DEBUG] [AuthController] - Login successful, returning token
+\end{verbatim}
+
+\section{Monitoring Points}
+
+\subsection{Key Metrics}
+
+\begin{verbatim}
+1. Application Health:
+   - Request/response times
+   - Error rates
+   - Database connection pool stats
+   - JVM memory usage
+
+2. API Performance:
+   - Endpoint response times
+   - Request volume per endpoint
+   - Exception rates
+   - Cache hit rates
+
+3. Database Performance:
+   - Query execution times
+   - Slow query logs
+   - Connection pool utilization
+   - Transaction duration
+
+4. Security Events:
+   - Failed login attempts
+   - Invalid token attempts
+   - CORS violations
+   - Rate limit triggers
+
+Monitoring Tools:
+- Spring Boot Actuator endpoints
+- Application Performance Monitoring (APM) integration
+- Centralized log aggregation (ELK stack)
+\end{verbatim}
+
+\newpage
+
+\chapter{Security Considerations}
+
+\section{OWASP Top 10 Mitigation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Vulnerability} & \textbf{Mitigation} & \textbf{Status} \\
+\hline
+SQL Injection & Parameterized queries (JPA) & ✓ \\
+Weak Auth & JWT + Spring Security & ✓ \\
+Sensitive Data Exposure & HTTPS + encryption & ✓ \\
+XML External Entities & Disable XXE processing & ✓ \\
+Broken Access Control & Role-based authorization & ✓ \\
+Security Misconfiguration & Configuration best practices & ✓ \\
+XSS & Input validation + encoding & ✓ \\
+Insecure Deserialization & Careful with serialization & ✓ \\
+Using Known Vulnerable Components & Dependency management & ✓ \\
+Insufficient Logging & Comprehensive logging & ✓ \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Data Protection}
+
+\subsection{Sensitive Data Handling}
+
+\begin{verbatim}
+1. Password Storage:
+   - BCrypt hashing (cost factor: 10)
+   - Never stored in plain text
+   - Salt automatically generated
+   - Validation timing-attack resistant
+
+2. JWT Token Security:
+   - Signed with HS256 algorithm
+   - Secret key minimum 256 bits
+   - Expiration time: 24 hours
+   - Token revocation support via blacklist
+
+3. Database Encryption:
+   - Sensitive columns encrypted at application level
+   - MariaDB transparent encryption option
+   - Backup encryption enforced
+
+4. API Communication:
+   - HTTPS/TLS 1.2+ required
+   - Certificate pinning recommended
+   - HSTS headers enabled
+\end{verbatim}
+
+\section{Compliance}
+
+\begin{verbatim}
+Data Privacy Measures:
+
+1. GDPR Compliance:
+   - User consent for data processing
+   - Right to be forgotten (data deletion)
+   - Data portability support
+   - Privacy policy compliance
+   - Data retention policies
+
+2. Access Control:
+   - Role-based access control (RBAC)
+   - Principle of least privilege
+   - Audit trails for all modifications
+   - Admin oversight capabilities
+
+3. Regulatory Compliance:
+   - Activity logging for legal requirements
+   - Report generation for audits
+   - Data backup and recovery procedures
+   - Incident response procedures
+\end{verbatim}
+
+\newpage
+
+\chapter{Deployment Guide}
+
+\section{Pre-Deployment Checklist}
+
+\begin{verbatim}
+[ ] Database created and initialized
+[ ] All environment variables configured
+[ ] SSL certificates installed
+[ ] Backup strategy implemented
+[ ] Monitoring tools configured
+[ ] Security audit completed
+[ ] Performance testing passed
+[ ] Documentation updated
+[ ] Team training completed
+[ ] Rollback procedure defined
+\end{verbatim}
+
+\section{Deployment Steps}
+
+\begin{verbatim}
+1. Build Stage:
+   mvn clean package
+   Output: target/infractions-0.0.1-SNAPSHOT.jar
+
+2. Pre-deployment:
+   - Backup current database
+   - Stop current application instance
+   - Clear application cache
+   - Verify database migrations
+
+3. Deployment:
+   - Copy JAR to production server
+   - Update configuration files
+   - Set environment variables
+   - Start application: java -jar infractions-0.0.1-SNAPSHOT.jar
+
+4. Post-deployment:
+   - Verify application startup
+   - Run smoke tests
+   - Monitor logs for errors
+   - Validate key functionality
+
+5. Monitoring:
+   - Check metrics dashboard
+   - Monitor error rates
+   - Verify database performance
+   - Monitor application memory
+\end{verbatim}
+
+\section{Docker Deployment}
+
+\begin{verbatim}
+Dockerfile:
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+COPY target/infractions-0.0.1-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENV JAVA_OPTS="-Xmx512m -Xms256m"
+ENTRYPOINT ["java", "${JAVA_OPTS}", "-jar", "app.jar"]
+
+Docker Compose (with database):
+version: '3.8'
+services:
+  mariadb:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: infractions
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+  
+  app:
+    build: .
+    depends_on:
+      - mariadb
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/infractions
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpassword
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  db_data:
+
+Deployment:
+docker-compose up -d
+\end{verbatim}
+
+\newpage
+
+\chapter{Conclusion}
+
+\section{Summary}
+
+This UVILLAGE Infractions Management System represents a comprehensive, production-ready application with:
+
+\begin{itemize}
+    \item \textbf{Robust Backend}: Spring Boot 3.2 with JWT authentication
+    \item \textbf{Scalable Architecture}: Microservices-ready with service layer pattern
+    \item \textbf{Secure Design}: Spring Security with role-based access control
+    \item \textbf{Multilingual Support}: Full i18n implementation (EN/FR)
+    \item \textbf{Rich Frontend}: Modern React/Next.js interface with shadcn/ui
+    \item \textbf{Data Persistence}: Reliable MariaDB with proper indexing
+    \item \textbf{Business Logic}: Comprehensive infraction, recidivism, and invoice management
+    \item \textbf{Monitoring \& Logging}: Complete observability stack
+\end{itemize}
+
+\section{Future Enhancements}
+
+\begin{enumerate}
+    \item Mobile application (native iOS/Android)
+    \item Machine learning-based recidivism prediction
+    \item Advanced analytics and reporting dashboard
+    \item Integration with external payment gateways
+    \item Real-time notifications via WebSocket
+    \item Geolocation tracking for infractions
+    \item Mobile scanning for documentation
+    \item Multi-organization support (SaaS)
+\end{enumerate}
+
+\section{Maintenance Recommendations}
+
+\begin{itemize}
+    \item Regular security patching (monthly)
+    \item Database optimization (quarterly)
+    \item Dependency updates (bi-monthly)
+    \item Performance testing (quarterly)
+    \item Disaster recovery drills (semi-annually)
+    \item Capacity planning (annually)
+\end{itemize}
+
+\section{Support \& Documentation}
+
+For additional information, refer to:
+\begin{itemize}
+    \item API Documentation: Swagger/OpenAPI endpoints
+    \item Code Documentation: JavaDoc in source files
+    \item Architecture Docs: See ARCHITECTURE\_I18N.md
+    \item Integration Guide: I18N\_INTEGRATION\_GUIDE.md
+\end{itemize}
+
+\vfill
+\begin{center}
+\textbf{Document Version: 1.0}\\
+\textbf{Last Updated: \today}\\
+\textbf{Classification: Technical Documentation}
+\end{center}
+
+\end{document}

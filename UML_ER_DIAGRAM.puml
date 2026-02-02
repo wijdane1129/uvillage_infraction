@@ -1,0 +1,161 @@
+@startuml UVILLAGE_ER_Diagram
+
+title UVILLAGE Infractions Management System - Entity-Relationship Diagram
+
+hide circle
+skinparam classBackgroundColor #f0f0f0
+skinparam class {
+    BackgroundColor<<entity>> #e3f2fd
+    BackgroundColor<<association>> #fff9c4
+    BorderColor #1976d2
+}
+
+entity "users" as users {
+    *id : BIGINT <<PK>>
+    --
+    email : VARCHAR(255) <<UQ>>
+    password_hash : VARCHAR(255)
+    first_name : VARCHAR(100)
+    last_name : VARCHAR(100)
+    role : ENUM(ADMIN, OFFICER, VIEWER)
+    is_active : BOOLEAN
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "residents" as residents {
+    *id : BIGINT <<PK>>
+    --
+    first_name : VARCHAR(100)
+    last_name : VARCHAR(100)
+    email : VARCHAR(255)
+    phone : VARCHAR(20)
+    address : VARCHAR(500)
+    registration_date : TIMESTAMP
+}
+
+entity "contravention_types" as contravention_types {
+    *id : BIGINT <<PK>>
+    --
+    name : VARCHAR(255)
+    description : TEXT
+    base_amount : DECIMAL(10,2)
+    severity : VARCHAR(50)
+}
+
+entity "contraventions" as contraventions {
+    *id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    resident_id : BIGINT <<FK>>
+    type_id : BIGINT <<FK>>
+    statut : ENUM(PENDING, RESOLVED, APPEALED)
+    date_infraction : DATE
+    description : TEXT
+    location : VARCHAR(500)
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "contravention_media" as contravention_media {
+    *id : BIGINT <<PK>>
+    --
+    contravention_id : BIGINT <<FK>>
+    file_name : VARCHAR(255)
+    file_path : VARCHAR(500)
+    media_type : VARCHAR(50)
+    upload_date : TIMESTAMP
+}
+
+entity "factures" as factures {
+    *id : BIGINT <<PK>>
+    --
+    contravention_id : BIGINT <<FK>>
+    invoice_number : VARCHAR(50) <<UQ>>
+    amount : DECIMAL(10,2)
+    status : ENUM(DRAFT, ISSUED, PAID, OVERDUE)
+    due_date : DATE
+    pdf_path : VARCHAR(500)
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "recidives" as recidives {
+    *id : BIGINT <<PK>>
+    --
+    contravention_id : BIGINT <<FK>>
+    resident_id : BIGINT <<FK>>
+    violation_count : INT
+    last_violation_date : DATE
+    recidivism_level : VARCHAR(50)
+}
+
+entity "password_reset_tokens" as password_reset_tokens {
+    *id : BIGINT <<PK>>
+    --
+    user_id : BIGINT <<FK>>
+    token : VARCHAR(500) <<UQ>>
+    expiry_date : TIMESTAMP
+    used : BOOLEAN
+}
+
+entity "immeubles" as immeubles {
+    *id : BIGINT <<PK>>
+    --
+    name : VARCHAR(255)
+    address : VARCHAR(500)
+    number_of_units : INT
+    created_at : TIMESTAMP
+}
+
+entity "chambres" as chambres {
+    *id : BIGINT <<PK>>
+    --
+    immeuble_id : BIGINT <<FK>>
+    resident_id : BIGINT <<FK>>
+    number : VARCHAR(50)
+    floor : INT
+}
+
+' Relationships
+users ||--o{ contraventions : "creates"
+residents ||--o{ contraventions : "has"
+contravention_types ||--o{ contraventions : "classifies"
+contraventions ||--o{ contravention_media : "contains"
+contraventions ||--o{ factures : "generates"
+contraventions ||--o{ recidives : "may_have"
+residents ||--o{ recidives : "tracked_for"
+immeubles ||--o{ chambres : "contains"
+residents ||--o{ chambres : "occupies"
+users ||--o{ password_reset_tokens : "requests"
+
+note right of users
+  Roles:
+  - ADMIN: Full system access
+  - OFFICER: Create/manage infractions
+  - VIEWER: Read-only access
+end note
+
+note right of contraventions
+  Status:
+  - PENDING: Awaiting resolution
+  - RESOLVED: Closed/completed
+  - APPEALED: Under appeal
+end note
+
+note right of factures
+  Invoice lifecycle:
+  - DRAFT: Work in progress
+  - ISSUED: Sent to resident
+  - PAID: Payment received
+  - OVERDUE: Payment not received
+end note
+
+note right of recidives
+  Tracks repeat offenders:
+  - violation_count > 1
+  - Identifies patterns
+  - Risk assessment
+end note
+
+@enduml

@@ -1,0 +1,403 @@
+@startuml UVILLAGE_Authentication_Sequence
+
+title Authentication Flow - User Login Sequence Diagram
+
+actor User as U
+participant "Browser" as B
+participant "AuthController" as AC
+participant "AuthService" as AS
+participant "UserRepository" as UR
+participant "JwtUtils" as JU
+participant "MariaDB" as DB
+
+U ->> B: Enter email & password
+activate B
+B ->> AC: POST /api/auth/login\n{email, password}
+activate AC
+
+AC ->> AC: Validate input\n@Valid annotation
+AC ->> AS: authenticateUser(email, password)
+activate AS
+
+AS ->> UR: findByEmail(email)
+activate UR
+UR ->> DB: SELECT * FROM users\nWHERE email = ?
+activate DB
+DB -->> UR: User object
+deactivate DB
+UR -->> AS: Optional<User>
+deactivate UR
+
+alt User found
+    AS ->> AS: Verify password\nPasswordEncoder.matches()
+    
+    alt Password matches
+        AS ->> JU: generateToken(user)
+        activate JU
+        JU ->> JU: Create JWT payload\nwith user claims
+        JU ->> JU: Sign with secret key
+        JU -->> AS: JWT token
+        deactivate JU
+        
+        AS ->> AS: Create AuthResponse\n{token, email, message}
+        AS -->> AC: AuthResponseDto
+    else Password incorrect
+        AS -->> AC: throw InvalidCredentialsException
+        AC ->> B: 401 Unauthorized\n{error: "Invalid credentials"}
+        B -->> U: Display error message
+    end
+else User not found
+    AS -->> AC: throw UserNotFoundException
+    AC ->> B: 401 Unauthorized\n{error: "User not found"}
+    B -->> U: Display error message
+end
+
+deactivate AS
+deactivate AC
+
+AC ->> B: 200 OK\n{token: "jwt...",\nemail: "user@example.com",\nmessage: "Login successful"}
+deactivate B
+
+B -->> U: Store JWT token\nRedirect to dashboard
+
+@enduml
+
+@startuml UVILLAGE_Infraction_Creation_Sequence
+
+title Infraction Creation Flow - New Violation Record
+
+actor Officer as O
+participant "Browser" as B
+participant "ContraventionController" as CC
+participant "ContraventionService" as CS
+participant "ContraventionRepository" as CR
+participant "ResidentRepository" as RR
+participant "ContraventionTypeRepository" as CTR
+participant "MariaDB" as DB
+
+O ->> B: Fill form:\nresident ID, type, date, location, photos
+activate B
+B ->> CC: POST /api/contraventions\n{CreateContraventionRequest}\nHeader: Authorization: Bearer JWT
+activate CC
+
+CC ->> CC: Validate JWT token\nJwtAuthenticationFilter
+alt Invalid/Expired token
+    CC ->> B: 401 Unauthorized
+    B -->> O: Authentication error
+    deactivate B
+    deactivate CC
+else Valid token
+    CC ->> CC: Parse and validate request DTO\n@Valid + Custom validators
+    
+    alt Validation fails
+        CC ->> B: 400 Bad Request\n{validation errors}
+        B -->> O: Display form errors
+        deactivate B
+        deactivate CC
+    else Validation passes
+        CC ->> CS: createContravention(request)
+        activate CS
+        
+        CS ->> RR: findById(residentId)
+        activate RR
+        RR ->> DB: SELECT * FROM residents\nWHERE id = ?
+        activate DB
+        DB -->> RR: Resident object
+        deactivate DB
+        RR -->> CS: Optional<Resident>
+        deactivate RR
+        
+        CS ->> CTR: findById(typeId)
+        activate CTR
+        CTR ->> DB: SELECT * FROM contravention_types\nWHERE id = ?
+        activate DB
+        DB -->> CTR: ContraventionType object
+        deactivate DB
+        CTR -->> CS: Optional<ContraventionType>
+        deactivate CTR
+        
+        alt Resident or Type not found
+            CS -->> CC: throw NotFoundException
+            CC ->> B: 404 Not Found\n{error: "Resident or type not found"}
+            B -->> O: Display error
+            deactivate CC
+            deactivate CS
+            deactivate B
+        else Both found
+            CS ->> CS: Create Contravention entity
+            CS ->> CS: Set fields:\nresident, type, date, location,\nstatut = PENDING
+            
+            CS ->> CR: save(contravention)
+            activate CR
+            CR ->> DB: INSERT INTO contraventions\n(resident_id, type_id, statut, ...)\nVALUES (...)
+            activate DB
+            DB -->> CR: Generated ID + entity
+            deactivate DB
+            CR -->> CS: Saved Contravention
+            deactivate CR
+            
+            CS ->> CS: Handle media files\nif photos provided
+            
+            CS ->> CS: Create audit log entry
+            
+            CS ->> CS: Build response DTO
+            CS -->> CC: ContraventionDTO
+            deactivate CS
+            
+            CC ->> B: 201 Created\n{id: 234,\ninfractionNumber: "INFRA-2024-000234",\nmessage: "Created"}
+            B -->> O: Success message +\nRedirect to infraction details
+            deactivate B
+            deactivate CC
+        end
+    end
+end
+
+@enduml
+
+@startuml UVILLAGE_Dashboard_Stats_Sequence
+
+title Dashboard Statistics Retrieval Flow
+
+actor Admin as A
+participant "Browser" as B
+participant "DashboardController" as DC
+participant "DashboardService" as DS
+participant "DashboardRepository" as DR
+participant "MariaDB" as DB
+
+A ->> B: Click Dashboard
+activate B
+
+B ->> DC: GET /api/dashboard/stats\nHeader: Authorization: Bearer JWT
+activate DC
+
+DC ->> DC: Validate JWT token
+alt Invalid token
+    DC ->> B: 401 Unauthorized
+    B -->> A: Redirect to login
+else Valid token
+    DC ->> DC: Check authorization\n(ADMIN or OFFICER role)
+    alt Unauthorized
+        DC ->> B: 403 Forbidden
+        B -->> A: Access denied error
+    else Authorized
+        DC ->> DS: getDashboardStats()
+        activate DS
+        
+        par Parallel queries for performance
+            DS ->> DR: Count infractions by status
+            activate DR
+            DR ->> DB: SELECT statut, COUNT(*) as count\nFROM contraventions\nGROUP BY statut
+            activate DB
+            DB -->> DR: Result set
+            deactivate DB
+            DR -->> DS: statsMap
+            deactivate DR
+            
+            DS ->> DR: Sum all fines
+            activate DR
+            DR ->> DB: SELECT SUM(amount) as total\nFROM factures\nWHERE status = 'PAID'
+            activate DB
+            DB -->> DR: BigDecimal total
+            deactivate DB
+            DR -->> DS: total
+            deactivate DR
+            
+            DS ->> DR: Calculate recidivism rate
+            activate DR
+            DR ->> DB: SELECT COUNT(DISTINCT resident_id)\nFROM contraventions\nWHERE resident_id IN (\n  SELECT resident_id FROM contraventions\n  GROUP BY resident_id HAVING COUNT(*) > 1\n) as recidivist_count
+            activate DB
+            DB -->> DR: count
+            deactivate DB
+            DR -->> DS: recidivismRate
+            deactivate DR
+            
+            DS ->> DR: Get top violations
+            activate DR
+            DR ->> DB: SELECT type_id, COUNT(*) as count\nFROM contraventions\nGROUP BY type_id\nORDER BY count DESC\nLIMIT 10
+            activate DB
+            DB -->> DR: Result set
+            deactivate DB
+            DR -->> DS: topViolations
+            deactivate DR
+        end
+        
+        DS ->> DS: Build DashboardStatsDto\nwith all aggregated data
+        DS -->> DC: DashboardStatsDto
+        deactivate DS
+        
+        DC ->> B: 200 OK\n{totalInfractions: 1524,\npendingCount: 156,\nresolvedCount: 1368,\ntotalFines: 125400.00,\nrecidivismRate: 12.5,\ntopViolationTypes: [...],\nmonthlyTrend: [...]}
+        activate B
+        B ->> B: Render charts & statistics
+        B -->> A: Display dashboard
+        deactivate B
+    end
+end
+deactivate DC
+
+@enduml
+
+@startuml UVILLAGE_Invoice_Generation_Sequence
+
+title Invoice (Facture) PDF Generation Flow
+
+participant "System" as SYS
+participant "ContraventionController" as CC
+participant "InvoicePdfService" as IPS
+participant "FactureRepository" as FR
+participant "ContraventionRepository" as CR
+participant "iTextPDF" as PDF
+participant "FileStorage" as FS
+participant "EmailService" as ES
+participant "MariaDB" as DB
+
+SYS ->> CC: POST /api/contraventions/{id}/invoice
+activate CC
+
+CC ->> CR: findById(id)
+activate CR
+CR ->> DB: SELECT * FROM contraventions WHERE id = ?
+activate DB
+DB -->> CR: Contravention entity
+deactivate DB
+CR -->> CC: Optional<Contravention>
+deactivate CR
+
+CC ->> IPS: generateInvoicePdf(contravention)
+activate IPS
+
+IPS ->> PDF: new Document()
+activate PDF
+PDF -->> IPS: PDF document
+deactivate PDF
+
+IPS ->> PDF: Add header\n(invoice number, date, company info)
+activate PDF
+deactivate PDF
+
+IPS ->> PDF: Add contravention details\n(infraction type, resident name,\nlocation, date, fine amount)
+activate PDF
+deactivate PDF
+
+IPS ->> PDF: Add terms & conditions
+activate PDF
+deactivate PDF
+
+IPS ->> PDF: Add signature placeholder
+activate PDF
+deactivate PDF
+
+IPS ->> PDF: Close and serialize
+activate PDF
+PDF -->> IPS: byte[] pdfContent
+deactivate PDF
+
+IPS ->> FS: save(pdfContent)
+activate FS
+FS -->> IPS: pdfPath = "/uploads/FAC-INFRA-234.pdf"
+deactivate FS
+
+IPS ->> IPS: Create Facture entity
+IPS ->> FR: save(facture)
+activate FR
+FR ->> DB: INSERT INTO factures\n(contravention_id, invoice_number,\namount, status, pdfPath, ...)\nVALUES (...)
+activate DB
+DB -->> FR: Generated ID + entity
+deactivate DB
+FR -->> IPS: Saved Facture
+deactivate FR
+
+IPS ->> ES: sendInvoiceEmail(factureId,\nresident.email)
+activate ES
+ES ->> ES: Build email template
+ES -->> ES: Send email with PDF attachment
+deactivate ES
+
+IPS -->> CC: InvoiceResponse\n{factureId: 567,\ninvoiceNumber: "FAC-INFRA-000234",\npdfUrl: "/uploads/FAC-INFRA-234.pdf"}
+deactivate IPS
+
+CC -->> SYS: 201 Created\n{invoice details}
+deactivate CC
+
+@enduml
+
+@startuml UVILLAGE_Internationalization_Flow
+
+title Internationalization (i18n) - Language Selection & API Response
+
+actor User as U
+participant "Frontend\n(React/Flutter)" as F
+participant "Browser\nStorage" as BS
+participant "API Server\n(Spring Boot)" as AS
+participant "I18nConfiguration" as I18N
+participant "MessageUtil" as MU
+participant "MessageSource" as MS
+participant "Database" as DB
+
+U ->> F: Click language switcher\nEN → FR
+activate F
+
+F ->> F: Update language state\n(Redux/Riverpod)
+F ->> BS: Save language preference\nlocalStorage.setItem('lang', 'fr')
+activate BS
+BS -->> F: OK
+deactivate BS
+
+F ->> F: Rebuild UI with new locale
+F ->> F: Text widget reads from\napp_fr.arb translations
+
+activate F
+note right: Frontend translations applied instantly
+F -->> U: UI displays in French
+deactivate F
+
+U ->> F: Submit form (e.g., login)
+activate F
+
+F ->> F: Add Accept-Language header\nAccept-Language: fr-FR, fr;q=0.9, en;q=0.8
+F ->> AS: POST /api/auth/login\n{email, password}\nHeaders: {Accept-Language: fr}
+activate AS
+deactivate F
+
+AS ->> I18N: Extract locale from header\nAcceptHeaderLocaleResolver
+activate I18N
+I18N ->> I18N: Parse Accept-Language: fr-FR
+I18N ->> I18N: Resolve to Locale('fr')
+I18N ->> I18N: Set LocaleContextHolder\nLocaleContextHolder.setLocale(Locale('fr'))
+I18N -->> AS: Locale context set
+deactivate I18N
+
+AS ->> AS: Process request\n(validate credentials, etc.)
+
+AS ->> MU: getMessage("user.login.success")
+activate MU
+MU ->> MU: Get current locale\nLocaleContextHolder.getLocale() → Locale('fr')
+MU ->> MS: Get message for key in FR locale\nmessageSource.getMessage("user.login.success",\nnull, Locale('fr'))
+activate MS
+
+MS ->> MS: Check cache first
+MS ->> DB: Load messages_fr.properties\nif not cached
+activate DB
+DB -->> MS: Property file loaded
+deactivate DB
+
+MS ->> MS: Lookup key in properties\nuser.login.success=Connexion réussie
+MS -->> MU: "Connexion réussie"
+deactivate MS
+
+MU -->> AS: "Connexion réussie"
+deactivate MU
+
+AS ->> AS: Build response with translated message
+AS -->> F: 200 OK\n{token: "...",\nemail: "user@example.com",\nmessage: "Connexion réussie"}
+
+F ->> F: Display response
+F -->> U: Show translated message\n"Connexion réussie"
+
+note right of U
+UI is in French (from app_fr.arb)
+API message is in French (from messages_fr.properties)
+Everything translated! ✓
+end note
+
+@enduml
