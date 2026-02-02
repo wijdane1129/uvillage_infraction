@@ -1,0 +1,461 @@
+===============================================================================
+                    UVILLAGE INFRACTIONS - UML DIAGRAMS
+                              PlantUML Format
+===============================================================================
+
+HOW TO USE THESE DIAGRAMS:
+1. Go to: https://www.plantuml.com/plantuml/uml/
+2. Copy one diagram code below
+3. Paste into the editor
+4. Download PNG
+
+
+===============================================================================
+DIAGRAM 1: CLASS DIAGRAM - ENTITIES ET RELATIONSHIPS
+===============================================================================
+
+@startuml Uvillage_Classes
+!theme plain
+
+package "com.uvillage.infractions" {
+  
+  enum Role {
+    ADMIN
+    OFFICER
+    USER
+  }
+
+  enum Status {
+    ACTIVE
+    SUSPENDED
+    DELETED
+  }
+
+  enum Severity {
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
+  }
+
+  class User {
+    - id: Long
+    - email: String
+    - password_hash: String
+    - firstname: String
+    - lastname: String
+    - role: Role
+    - status: Status
+    - created_at: Timestamp
+    - updated_at: Timestamp
+    --
+    + getId()
+    + getEmail()
+    + getRole()
+    + setRole(Role)
+  }
+
+  class Infraction {
+    - id: Long
+    - user_id: Long
+    - violation_type: String
+    - description: String
+    - severity: Severity
+    - amount: BigDecimal
+    - status: String
+    - location: String
+    - created_at: Timestamp
+    - updated_at: Timestamp
+    --
+    + getId()
+    + getAmount()
+    + updateStatus(String)
+    + generateReport()
+  }
+
+  class Payment {
+    - id: Long
+    - infraction_id: Long
+    - amount: BigDecimal
+    - payment_method: String
+    - transaction_id: String
+    - paid_at: Timestamp
+    - receipt_path: String
+    --
+    + getId()
+    + getAmount()
+    + getReceiptPath()
+    + markAsPaid()
+  }
+
+  class Report {
+    - id: Long
+    - infraction_id: Long
+    - generated_at: Timestamp
+    - file_path: String
+    - report_type: String
+    --
+    + generatePDF()
+    + getFilePath()
+  }
+
+  class AuditLog {
+    - id: Long
+    - user_id: Long
+    - action: String
+    - entity_type: String
+    - entity_id: Long
+    - timestamp: Timestamp
+    - ip_address: String
+    --
+    + getId()
+    + getAction()
+  }
+
+  class PaymentMethod {
+    - id: Long
+    - name: String
+    - active: Boolean
+    --
+    + isActive()
+  }
+
+  User "1" -- "many" Infraction : creates
+  User "1" -- "many" AuditLog : performs
+  Infraction "1" -- "many" Payment : has
+  Infraction "1" -- "many" Report : generates
+  Payment "many" -- "1" PaymentMethod : uses
+}
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 2: AUTHENTICATION FLOW - SEQUENCE DIAGRAM
+===============================================================================
+
+@startuml Uvillage_Auth_Flow
+actor Client as client
+participant "Flutter App" as app
+participant "Spring Boot API" as api
+database "MariaDB" as db
+
+client -> app: Tap Login Button
+app -> app: Validate Input
+app -> api: POST /api/v1/auth/login\n{email, password}
+api -> api: Validate Credentials
+api -> db: SELECT user WHERE email=?
+db --> api: User Record
+api -> api: Compare Password Hash (bcrypt)
+api -> api: Generate JWT Token\n(sub, iat, exp, roles)
+api --> app: 200 OK\n{token, refresh_token, user_data}
+app -> app: Store Token (Secure Storage)
+app -> app: Update Language State\n(Accept-Language Header)
+app --> client: Navigate to Dashboard
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 3: INFRACTION CREATION FLOW
+===============================================================================
+
+@startuml Uvillage_Infraction_Flow
+participant "Mobile App" as mobile
+participant "Spring Boot" as backend
+participant "Services Layer" as services
+database "MariaDB" as db
+
+mobile -> backend: POST /api/v1/infractions\n{violation, amount, user_id}
+backend -> services: InfractionService.create()
+services -> services: Validate Input
+services -> db: INSERT INTO infractions
+db --> services: Record Created (id)
+services -> services: Calculate Fees
+services -> db: INSERT INTO payments (pending)
+services -> services: Generate Report Reference
+services --> backend: InfractionDTO
+backend --> mobile: 201 CREATED\n{infraction, payment_ref}
+mobile -> mobile: Show Success Notification
+mobile -> mobile: Update UI
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 4: PAYMENT PROCESSING SEQUENCE
+===============================================================================
+
+@startuml Uvillage_Payment_Flow
+participant "User" as user
+participant "Mobile App" as app
+participant "API Backend" as api
+database "Database" as db
+participant "Email Service" as email
+
+user -> app: Initiate Payment
+app -> api: POST /api/v1/payments\n{infraction_id, amount}
+api -> db: SELECT infraction
+api -> api: Validate Amount
+api -> db: INSERT payment (PENDING)
+api --> app: Payment Reference
+app -> app: Process Payment\n(Mock/Stripe)
+app -> api: POST /api/v1/payments/confirm\n{ref, proof}
+api -> api: Verify Payment Proof
+api -> db: UPDATE payment status = PAID
+api -> db: UPDATE infraction status = PAID
+api -> email: Send Confirmation Email
+email --> user: Receipt with Invoice
+api --> app: 200 OK Payment Confirmed
+app -> app: Update UI
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 5: DASHBOARD STATISTICS LOADING
+===============================================================================
+
+@startuml Uvillage_Dashboard_Stats
+participant "Flutter App" as app
+participant "Spring Boot API" as api
+database "Database" as db
+
+app -> app: Load Dashboard Page
+app -> api: GET /api/v1/reports/statistics
+api -> db: Query Statistics\n(Total Infractions, Revenue, etc)
+db --> api: Aggregated Data
+api -> api: Format Response\nwith timestamps
+api --> app: {stats, charts_data}
+app -> app: Render Pie Charts\n(Riverpod State Update)
+app -> app: Display KPIs
+app --> user: Dashboard Visible
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 6: DATABASE ENTITY-RELATIONSHIP (ER)
+===============================================================================
+
+@startuml Uvillage_ER_Diagram
+!theme plain
+skinparam classBackgroundColor #F1F1F1
+skinparam classBorderColor #333333
+
+entity "users" {
+  *id : bigint <<PK>>
+  --
+  email : varchar(255) <<UNIQUE>>
+  password_hash : varchar(255)
+  firstname : varchar(100)
+  lastname : varchar(100)
+  role : enum
+  status : enum
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "infractions" {
+  *id : bigint <<PK>>
+  --
+  user_id : bigint <<FK>>
+  violation_type : varchar(100)
+  description : text
+  severity : enum
+  amount : decimal(10,2)
+  status : varchar(50)
+  location : varchar(255)
+  created_at : timestamp
+  updated_at : timestamp
+}
+
+entity "payments" {
+  *id : bigint <<PK>>
+  --
+  infraction_id : bigint <<FK>>
+  amount : decimal(10,2)
+  payment_method : varchar(50)
+  transaction_id : varchar(255)
+  paid_at : timestamp
+  receipt_path : varchar(255)
+}
+
+entity "reports" {
+  *id : bigint <<PK>>
+  --
+  infraction_id : bigint <<FK>>
+  generated_at : timestamp
+  file_path : varchar(255)
+  report_type : varchar(50)
+}
+
+entity "audit_logs" {
+  *id : bigint <<PK>>
+  --
+  user_id : bigint <<FK>>
+  action : varchar(100)
+  entity_type : varchar(50)
+  entity_id : bigint
+  timestamp : timestamp
+  ip_address : varchar(45)
+}
+
+entity "payment_methods" {
+  *id : bigint <<PK>>
+  --
+  name : varchar(100)
+  active : boolean
+}
+
+users ||--o{ infractions : creates
+users ||--o{ audit_logs : performs
+infractions ||--o{ payments : has
+infractions ||--o{ reports : generates
+payments }o--|| payment_methods : uses
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 7: SYSTEM ARCHITECTURE - DEPLOYMENT
+===============================================================================
+
+@startuml Uvillage_Architecture
+!theme plain
+
+rectangle "CLIENT LAYER" {
+  component "Flutter Mobile App" as flutter
+  component "Web Browser" as web
+}
+
+rectangle "API GATEWAY" {
+  component "Load Balancer" as lb
+}
+
+rectangle "APPLICATION LAYER" {
+  component "Spring Boot API Server" as spring
+  note on right : Port 8080\nJava 17\nTomcat
+}
+
+rectangle "SERVICE LAYER" {
+  component "AuthService" as auth_srv
+  component "InfractionService" as inf_srv
+  component "PaymentService" as pay_srv
+  component "ReportService" as rep_srv
+}
+
+rectangle "DATA LAYER" {
+  component "JPA Repositories" as jpa
+  component "MariaDB Database" as db
+  note on right : Port 3306\nVer 10.6+
+}
+
+flutter --> lb : HTTPS/TLS
+web --> lb : HTTPS/TLS
+lb --> spring : Route
+spring --> auth_srv : Dependency Injection
+spring --> inf_srv
+spring --> pay_srv
+spring --> rep_srv
+auth_srv --> jpa : Query
+inf_srv --> jpa
+pay_srv --> jpa
+rep_srv --> jpa
+jpa --> db : JDBC Connection
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 8: SECURITY ARCHITECTURE
+===============================================================================
+
+@startuml Uvillage_Security
+!theme plain
+
+participant "Client" as client
+participant "API Endpoint" as endpoint
+participant "Security Layer" as security
+participant "JWT Provider" as jwt
+participant "Authorization" as authz
+participant "Business Logic" as logic
+
+client -> endpoint: HTTP Request\nAuthorization: Bearer token
+endpoint -> security: SpringSecurityFilter
+security -> jwt: Validate Token
+jwt -> jwt: Decode JWT\nVerify Signature
+jwt --> security: Valid: Claims{sub, roles, exp}
+security -> authz: Check Permissions\n(RBAC)
+authz -> authz: User Role Check
+authz --> security: Authorized
+security --> endpoint: Continue
+endpoint -> logic: Execute Business Logic
+logic --> endpoint: Response
+endpoint --> client: 200 OK + Data
+
+note right of jwt
+  Token Structure:
+  Header.Payload.Signature
+  Algo: HS256
+  Exp: 1 hour
+end note
+
+note right of authz
+  Roles:
+  - ADMIN: All access
+  - OFFICER: Infractions CRUD
+  - USER: Read own data
+end note
+
+@enduml
+
+
+===============================================================================
+DIAGRAM 9: INTERNATIONALIZATION FLOW
+===============================================================================
+
+@startuml Uvillage_I18n
+!theme plain
+
+participant "Flutter App" as app
+participant "Language\nProvider" as lang
+participant "API Server" as api
+database "Messages" as msgs
+
+app -> app: User selects Language\n(EN / FR 🇫🇷)
+app -> lang: setLanguage('fr')
+lang -> lang: Update State to Locale('fr')
+lang --> app: Emit Locale Change
+app -> app: Rebuild UI with\napp_fr.arb strings
+
+app -> api: API Call\nHeader: Accept-Language: fr
+api -> api: LocaleContextHolder\n.setLocale(fr)
+api -> msgs: Load messages_fr.properties
+msgs --> api: French Messages
+api -> api: Format Response\nin French
+
+api --> app: Response with FR text
+app --> user: UI Displayed in French
+
+@enduml
+
+
+===============================================================================
+HOW TO GENERATE PNG/PDF:
+
+1. ONLINE (Recommended - No Installation):
+   - Go to https://www.plantuml.com/plantuml/uml/
+   - Copy entire @startuml...@enduml block
+   - Click "Update"
+   - Right-click Image → Save As
+
+2. LOCAL (With PlantUML installed):
+   plantuml -Tpng diagram.puml
+
+3. MAVEN INTEGRATION:
+   Add plugin to pom.xml for automatic generation
+
+===============================================================================
+END OF DIAGRAMS
+===============================================================================
