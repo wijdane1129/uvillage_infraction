@@ -1,14 +1,18 @@
 // lib/services/file_upload_service.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FileUploadService {
   final Dio dio;
 
-  final String baseUrl = 'http://192.168.68.100:8080/api/contravention/media';
+  late final String baseUrl =
+      kIsWeb
+          ? 'http://localhost:8080/api/contravention/media'
+          : 'http://192.168.68.119:8080/api/contravention/media';
 
   FileUploadService({required this.dio});
-  
+
   Future<Map<String, dynamic>> uploadEvidenceFile({
     required int rowid,
     required File file,

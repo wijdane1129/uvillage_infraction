@@ -8,6 +8,8 @@ import com.uvillage.infractions.repository.DashboardRepository;
 import com.uvillage.infractions.repository.UserRepository;
 import com.uvillage.infractions.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,11 +21,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(DashboardService.class);
+    
     private final DashboardRepository dashboardRepository;
     private final UserRepository userRepository;
-    
-    private List<String> agentNames;
-    private List<String> residentNames = Arrays.asList("M. Durand", "L. Petit", "C. Rousseau", "J. Thomas", "F. Girard", "Alice Dubois", "Bob Martin", "Claire Leclerc");
+    private final ResidentMockService residentMockService;
 
     // Original method for compatibility
     public DashboardStatsDto getDashboardStats() {
@@ -65,9 +68,6 @@ public class DashboardService {
 
     // New method for Responsable Dashboard
     public DashboardResponsableDto getDashboardResponsable() {
-        // Load real agent and resident names from database
-        loadAgentAndResidentNames();
-        
         // Stats
         Long total = dashboardRepository.countInfraction();
         Long pending = dashboardRepository.countPendingInfractions();
@@ -99,19 +99,6 @@ public class DashboardService {
                 .statusDistribution(statusDist)
                 .build();
     }
-    
-    private void loadAgentAndResidentNames() {
-        // Load real agent names from users table
-        agentNames = userRepository.findAll().stream()
-                .map(User::getFullName)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-        
-        // If no agents found, use defaults
-        if (agentNames.isEmpty()) {
-            agentNames = Arrays.asList("Agent 1", "Agent 2", "Agent 3", "Agent 4", "Agent 5");
-        }
-    }
 
     private List<DashboardResponsableDto.ChartDataPoint> getChartDataLast30Days() {
         List<Object[]> dailyCounts = dashboardRepository.countDailyLast30Days();
@@ -131,7 +118,6 @@ public class DashboardService {
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate();
             } else {
-                // Fallback: try to parse string representation
                 date = LocalDate.parse(rawDate.toString());
             }
 
@@ -152,23 +138,74 @@ public class DashboardService {
         return chartPoints;
     }
 
+    /**
+     * 🎯 MÉTHODE CLÉE - Convertit une Contravention en DTO pour l'affichage
+     * Utilise les VRAIES données de la contravention (chambre + bâtiment)
+     */
     private RecentContraventionDto convertToRecentDto(Contravention c) {
-        String agentName = null;
+        logger.debug("🔍 Converting contravention {} to DTO", c.getRef());
+        
+        // 1. NOM DE L'AGENT - Celui qui a déclaré la contravention
+        String agentName = "Agent inconnu";
         if (c.getUserAuthor() != null && c.getUserAuthor().getFullName() != null) {
             agentName = c.getUserAuthor().getFullName();
-        } else {
-            // Use agent names from database, indexed by rowid
-            agentName = agentNames.get((int)(c.getRowid() % agentNames.size()));
+            logger.debug("  👤 Agent: {}", agentName);
         }
         
-        String residentName = null;
-        if (c.getTiers() != null && c.getTiers().getNomResident() != null) {
-            residentName = c.getTiers().getNomResident();
-        } else {
-            // Use resident names from database, indexed by rowid
-            residentName = residentNames.get((int)(c.getRowid() % residentNames.size()));
+        // 2. CHAMBRE ET BÂTIMENT - Depuis la contravention déclarée
+        String numeroChambre = null;
+        String batiment = null;
+        
+        // Essayer d'abord depuis chambre
+        if (c.getChambre() != null) {
+            numeroChambre = c.getChambre().getNumeroChambre();
+            if (c.getChambre().getImmeuble() != null) {
+                batiment = c.getChambre().getImmeuble().getNom();
+            }
+            logger.debug("  🏠 Chambre: {}, Bâtiment: {}", numeroChambre, batiment);
         }
         
+        // Fallback: essayer depuis tiers.chambre si disponible
+        if ((numeroChambre == null || batiment == null) && c.getTiers() != null && c.getTiers().getChambre() != null) {
+            if (numeroChambre == null) {
+                numeroChambre = c.getTiers().getChambre().getNumeroChambre();
+            }
+            if (batiment == null && c.getTiers().getChambre().getImmeuble() != null) {
+                batiment = c.getTiers().getChambre().getImmeuble().getNom();
+            }
+            logger.debug("  🏠 Chambre (from tiers): {}, Bâtiment: {}", numeroChambre, batiment);
+        }
+        
+        // 3. CHERCHER LE RÉSIDENT DANS LE CSV MOCKÉ
+        String residentName = "Résident inconnu";
+        String residentAdresse = "Adresse inconnue";
+        
+        if (numeroChambre != null && batiment != null) {
+            // 🎯 RECHERCHE PAR CHAMBRE + BÂTIMENT
+            ResidentMockService.MockResident mockResident = 
+                residentMockService.findByRoom(numeroChambre, batiment);
+            
+            if (mockResident != null) {
+                residentName = mockResident.getFullName();
+                residentAdresse = mockResident.getAdresse();
+                logger.debug("  ✅ Found resident: {} at {}", residentName, residentAdresse);
+            } else {
+                // Pas trouvé dans le CSV
+                logger.warn("  ⚠️ No resident found for Chambre {}, Bâtiment {}", numeroChambre, batiment);
+                residentAdresse = String.format("Chambre %s, %s", numeroChambre, batiment);
+            }
+        } else {
+            // Pas de chambre/bâtiment dans la contravention
+            logger.warn("  ❌ No room/building info in contravention {}", c.getRef());
+            
+            // Fallback: essayer de prendre depuis tiers si disponible
+            if (c.getTiers() != null && c.getTiers().getNomResident() != null) {
+                residentName = c.getTiers().getNomResident();
+                logger.debug("  📝 Using tiers name: {}", residentName);
+            }
+        }
+        
+        // 4. CONSTRUIRE LE DTO
         return RecentContraventionDto.builder()
                 .rowid(c.getRowid())
                 .ref(c.getRef())
@@ -178,6 +215,7 @@ public class DashboardService {
                 .statut(c.getStatut().toString())
                 .agentName(agentName)
                 .residentName(residentName)
+                .residentAdresse(residentAdresse)
                 .montantAmende(0.0) // TODO: Calculate from recidives
                 .build();
     }

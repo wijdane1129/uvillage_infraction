@@ -15,7 +15,8 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/api/v1/**") // Appliquer la règle à tous les endpoints sous /api/v1
                 .allowedOriginPatterns(
                     "http://localhost:*", 
-                    "http://127.0.0.1:*"
+                    "http://127.0.0.1:*",
+                    "http://192.168.68.119:*"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Autoriser les méthodes HTTP
                 .allowedHeaders("*") // Autoriser tous les headers dans la requête

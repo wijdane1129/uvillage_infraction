@@ -50,6 +50,10 @@ public class Contravention {
     @JoinColumn(name="fk_type_contravention", nullable=false)
     private ContraventionType typeContravention;
 
+    @ManyToOne
+    @JoinColumn(name="fk_chambre")
+    private Chambre chambre;
+
     @OneToMany(mappedBy="contravention", cascade=CascadeType.ALL)
     private List<ContraventionMedia> media;
 
@@ -78,6 +82,10 @@ public class Contravention {
         return this.tiers;
     }
 
+    public Chambre getChambre() {
+        return this.chambre;
+    }
+
     // Explicit setters to avoid Lombok reliance in IDE/processor
     public void setDescription(String description) {
         this.description = description;
@@ -101,5 +109,9 @@ public class Contravention {
 
     public void setTypeContravention(ContraventionType typeContravention) {
         this.typeContravention = typeContravention;
+    }
+
+    public void setChambre(Chambre chambre) {
+        this.chambre = chambre;
     }
 }

@@ -21,8 +21,11 @@ class ApiService {
 
   /// Get base URL for public endpoints (without /v1)
   static String get _baseUrl {
-    // Always use the local network IP for all platforms to allow phone access
-    return 'http://192.168.68.100:8080';
+    if (kIsWeb) {
+      return 'http://localhost:8080';
+    } else {
+      return 'http://192.168.68.119:8080';
+    }
   }
 
   ApiService._internal() {
@@ -55,25 +58,36 @@ class ApiService {
           try {
             token = await AuthService.getToken();
             if (token != null && token.isNotEmpty && kDebugMode) {
-              print('🔑 [API SERVICE] Fallback token from Hive used for dashboard');
+              print(
+                '🔑 [API SERVICE] Fallback token from Hive used for dashboard',
+              );
             }
           } catch (_) {}
         } else {
-          if (kDebugMode) print('🔑 [API SERVICE] Token from secure storage used for dashboard');
+          if (kDebugMode)
+            print(
+              '🔑 [API SERVICE] Token from secure storage used for dashboard',
+            );
         }
 
-        final client = Dio(BaseOptions(
-          baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          },
-        ));
+        final client = Dio(
+          BaseOptions(
+            baseUrl: _baseUrl,
+            connectTimeout: const Duration(seconds: 15),
+            receiveTimeout: const Duration(seconds: 15),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+            },
+          ),
+        );
 
-        if (kDebugMode) print('📤 [API SERVICE] GET -> ${client.options.baseUrl}/api$path (with auth=${token!=null})');
+        if (kDebugMode)
+          print(
+            '📤 [API SERVICE] GET -> ${client.options.baseUrl}/api$path (with auth=${token != null})',
+          );
         return await client.get('/api$path');
       }
 

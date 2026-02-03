@@ -1,0 +1,12 @@
+ID Étudiant,Nom,Prénom,Sexe,Filière,Bâtiment,Numéro Chambre,Type chambre,Date d'Entrée,Date de Sort,Statut Paiement
+1001,El Amrani,Sara,F,Informatique,A,204,Simple,9/1/2025,7/1/2026,Payé
+1002,Benali,Youssef,M,Gestion,B,312,Double,9/3/2025,7/1/2026,En attente
+1003,Haddad,Lina,F,Marketing,A,205,Simple,9/2/2025,7/1/2026,Payé
+1004,Tazi,Imane,F,Finance,C,108,Simple,9/4/2025,7/1/2026,Payé
+1005,Mouline,Omar,M,Ingénierie,B,318,Double,9/5/2025,7/1/2026,En attente
+1006,Cherkaoui,Hiba,F,Architecture,D,102,Simple,9/6/2025,7/1/2026,Payé
+1007,Fassi,Adil,M,Droit,C,210,Double,9/2/2025,7/1/2026,Payé
+1008,Bennani,Nora,F,Médecine,A,201,Simple,9/1/2025,7/1/2026,Payé
+1009,Khalil,Rania,F,Comptabilité,B,307,Double,9/3/2025,7/1/2026,En attente
+1010,Ouahbi,Hamza,M,Sciences Po,D,115,Simple,9/5/2025,7/1/2026,Payé
+1011,amri,Rania,F,Comptabilité,C,307,Double,9/3/2025,7/1/2026,En attente

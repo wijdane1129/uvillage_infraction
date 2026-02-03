@@ -80,19 +80,17 @@ class ContraventionDetailsScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => AssignContraventionScreen(
-                        contraventionId: contravention.rowid ?? 0,
-                        motif: contravention.motif,
-                      ),
+                      builder:
+                          (_) => AssignContraventionScreen(
+                            contraventionId: contravention.rowid ?? 0,
+                            motif: contravention.motif,
+                          ),
                     ),
                   );
                 },
                 child: const Text(
                   'Assigner à un Résident',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -100,40 +98,43 @@ class ContraventionDetailsScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder:
-                            (_) => ClasserSansSuiteScreen(
-                              contravention: contravention,
-                            ),
-                      ),
-                    );
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Text('Classer sans suite'),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ClasserSansSuiteScreen(
+                            contravention: contravention,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Text('Classer sans suite'),
+                    ),
                   ),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder:
-                            (_) => AccepterContraventionScreen(
-                              contravention: contravention,
-                            ),
-                      ),
-                    );
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Text('Accepter'),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AccepterContraventionScreen(
+                            contravention: contravention,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      child: Text('Accepter'),
+                    ),
                   ),
                 ),
               ],
@@ -196,13 +197,18 @@ class ContraventionDetailsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          // 👤 AGENT QUI A DÉCLARÉ
           Row(
             children: [
-              CircleAvatar(radius: 16, child: const Icon(Icons.person)),
+              Icon(Icons.person, color: Colors.blueAccent, size: 20),
               const SizedBox(width: 8),
+              Text('Agent: ', style: TextStyle(color: Colors.white70)),
               Text(
                 contravention.userAuthor,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -219,6 +225,14 @@ class ContraventionDetailsScreen extends StatelessWidget {
   }
 
   Widget _personCard(BuildContext context) {
+    // 🎯 UTILISER LES VRAIES DONNÉES DE LA CONTRAVENTION
+    // PAS DE DONNÉES HARDCODÉES !
+
+    // Le backend devrait envoyer residentName et residentAdresse
+    // Si votre modèle Contravention ne les a pas encore, utilisez 'tiers' temporairement
+    String residentName = contravention.residentName ?? 'Résident inconnu';
+    String residentAdresse = contravention.residentAdresse ?? 'Adresse inconnue';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -257,16 +271,16 @@ class ContraventionDetailsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  contravention.userAuthor,
+                  residentName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Chambre 304, Bâtiment C',
-                  style: TextStyle(color: Colors.white70),
+                Text(
+                  residentAdresse,
+                  style: const TextStyle(color: Colors.white70),
                 ),
               ],
             ),
@@ -278,8 +292,10 @@ class ContraventionDetailsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onPressed: () {},
-            child: const Text('Voir historique'),
+            onPressed: () {
+              // TODO: Naviguer vers l'historique du résident
+            },
+            child: const Text('Historique'),
           ),
         ],
       ),
@@ -315,7 +331,6 @@ class ContraventionDetailsScreen extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 1,
           ),
           itemCount: contravention.media.length,
           itemBuilder: (context, index) {
@@ -333,57 +348,36 @@ class ContraventionDetailsScreen extends StatelessWidget {
               },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (!isVideo)
+                      Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (_, __, ___) => Container(color: Colors.grey),
+                      )
+                    else
+                      Container(
+                        color: Colors.black54,
+                        child: const Center(
+                          child: Icon(
+                            Icons.videocam,
+                            size: 48,
+                            color: Colors.white70,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (!isVideo) ...[
-                        Image.network(
-                          url,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(color: Colors.black12);
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(color: Colors.grey);
-                          },
+                    if (isVideo)
+                      const Center(
+                        child: Icon(
+                          Icons.play_circle_fill,
+                          size: 56,
+                          color: Colors.white70,
                         ),
-                      ] else ...[
-                        Container(
-                          color: Colors.black54,
-                          child: const Center(
-                            child: Icon(
-                              Icons.videocam,
-                              size: 48,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (isVideo)
-                        const Positioned.fill(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.play_circle_fill,
-                              size: 56,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             );

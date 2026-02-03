@@ -85,6 +85,8 @@ class Contravention {
   final String userAuthor;
   final String tiers;
   final String motif;
+  final String? residentAdresse;
+  final String? residentName; // Added to represent mock resident name
 
   Contravention({
     this.rowid,
@@ -96,6 +98,8 @@ class Contravention {
     required this.userAuthor,
     required this.tiers,
     required this.motif,
+    this.residentAdresse,
+    this.residentName, // Added to constructor
   });
 
   Map<String, dynamic> toJson() {
@@ -116,15 +120,15 @@ class Contravention {
       userAuthor: json['userAuthor'] as String? ?? '',
       tiers: json['tiers'] as String? ?? '',
       motif: json['motif'] as String? ?? '',
-      media:
-          (json['media'] as List<dynamic>? ?? [])
-              .map(
-                (e) => ContraventionMediaModels.fromJson(
-                  e as Map<String, dynamic>,
-                ),
-              )
-              .toList(),
-        
+      residentAdresse: json['residentAdresse'] as String?,
+      residentName: json['residentName'] as String?, // Added to JSON parsing
+      media: (json['media'] as List<dynamic>? ?? [])
+          .map(
+            (e) => ContraventionMediaModels.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
     );
   }
 }

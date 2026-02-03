@@ -59,8 +59,13 @@ class AuthService {
   static const String _authBoxName = 'authBox';
 
   static String get _baseHost {
-    // Always use the local network IP for all platforms to allow phone access
-    return 'http://192.168.68.100:8080';
+    if (kIsWeb) {
+      // Web (Edge browser): use localhost
+      return 'http://localhost:8080';
+    } else {
+      // Mobile (Android phone): use network IP
+      return 'http://192.168.68.119:8080';
+    }
   }
 
   // Login endpoint uses the /api/v1/auth path
@@ -82,14 +87,16 @@ class AuthService {
       );
 
       final loginResponse = LoginResponse.fromJson(
-          Map<String, dynamic>.from(response.data));
+        Map<String, dynamic>.from(response.data),
+      );
 
       if (loginResponse.token.isNotEmpty) {
         await _saveToken(loginResponse.token);
         // Persist role for frontend routing / UI access control
-        final authBox = Hive.isBoxOpen(_authBoxName)
-            ? Hive.box(_authBoxName)
-            : await Hive.openBox(_authBoxName);
+        final authBox =
+            Hive.isBoxOpen(_authBoxName)
+                ? Hive.box(_authBoxName)
+                : await Hive.openBox(_authBoxName);
         if (loginResponse.role != null) {
           await authBox.put('role', loginResponse.role);
         }
@@ -108,9 +115,10 @@ class AuthService {
   }
 
   Future<void> _saveToken(String token) async {
-    final authBox = Hive.isBoxOpen(_authBoxName)
-        ? Hive.box(_authBoxName)
-        : await Hive.openBox(_authBoxName);
+    final authBox =
+        Hive.isBoxOpen(_authBoxName)
+            ? Hive.box(_authBoxName)
+            : await Hive.openBox(_authBoxName);
     await authBox.put('jwt_token', token);
     if (kDebugMode) print('🔒 [AUTH] Token sauvegardé dans Hive');
     // Temporary: print full token in debug to allow manual curl testing
@@ -243,9 +251,10 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        final msg = response.data is Map && response.data['message'] != null
-            ? response.data['message'].toString()
-            : 'Password changed successfully';
+        final msg =
+            response.data is Map && response.data['message'] != null
+                ? response.data['message'].toString()
+                : 'Password changed successfully';
         return {'success': true, 'message': msg};
       }
 

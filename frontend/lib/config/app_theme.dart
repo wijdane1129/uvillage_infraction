@@ -22,6 +22,9 @@ class AppTheme {
   // CORRECTION: Ajout de backgroundPrimary pour résoudre l'erreur
   static const Color backgroundPrimary = darkBg; 
 
+  // Added darkCard for card background color
+  static const Color darkCard = Color(0xFF2A2D3E);
+
   // -------------------------
   // Dark Theme Configuration
   // -------------------------

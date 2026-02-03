@@ -20,5 +20,6 @@ public class RecentContraventionDto {
     private String statut;
     private String agentName;
     private String residentName;
+    private String residentAdresse;
     private Double montantAmende; // if applicable
 }

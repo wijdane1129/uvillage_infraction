@@ -23,4 +23,12 @@ public class Chambre {
 
     @OneToMany(mappedBy="chambre")
     private List<Resident> residents;
+
+    public String getNumeroChambre() {
+        return this.numero;
+    }
+
+    public void setNumeroChambre(String numero) {
+        this.numero = numero;
+    }
 }
