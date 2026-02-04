@@ -2,15 +2,73 @@ import 'package:flutter/material.dart';
 import 'package:infractions_app/screens/classer_sans_suite_screen.dart';
 import '../config/app_theme.dart';
 import '../models/contravention_models.dart';
+import '../services/resident_mock_service.dart';
 import 'media_viewer.dart';
 import 'accepter_contravention_screen.dart';
 import 'assign_contravention_screen.dart';
 
-class ContraventionDetailsScreen extends StatelessWidget {
+class ContraventionDetailsScreen extends StatefulWidget {
   final Contravention contravention;
 
   const ContraventionDetailsScreen({Key? key, required this.contravention})
     : super(key: key);
+
+  @override
+  State<ContraventionDetailsScreen> createState() =>
+      _ContraventionDetailsScreenState();
+}
+
+class _ContraventionDetailsScreenState
+    extends State<ContraventionDetailsScreen> {
+  MockResident? _mockResident;
+  bool _isLoadingResident = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResidentData();
+  }
+
+  /// 🎯 MÉTHODE CLÉE - Charge les données du résident depuis le CSV
+  Future<void> _loadResidentData() async {
+    try {
+      print(
+        '📋 Chargement résident pour contravention ${widget.contravention.ref}',
+      );
+
+      // Extraire chambre et bâtiment depuis la contravention
+      final extracted = ResidentMockService.extractRoomAndBuilding(
+        widget.contravention.residentAdresse,
+      );
+
+      final numeroChambre = extracted['chamber'];
+      final batiment = extracted['building'];
+
+      print('🔍 Extracted: Chambre=$numeroChambre, Bâtiment=$batiment');
+
+      if (numeroChambre != null && batiment != null) {
+        final resident = await ResidentMockService.findResidentByRoom(
+          numeroChambre,
+          batiment,
+        );
+
+        setState(() {
+          _mockResident = resident;
+          _isLoadingResident = false;
+        });
+      } else {
+        print('⚠️ Impossible d\'extraire chambre/bâtiment de l\'adresse');
+        setState(() {
+          _isLoadingResident = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur chargement résident: $e');
+      setState(() {
+        _isLoadingResident = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +83,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Infraction #${contravention.ref}',
+                'Infraction #${widget.contravention.ref}',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
             ),
@@ -43,7 +101,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
                 ],
               ),
               child: Text(
-                contravention.status,
+                widget.contravention.status,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -82,8 +140,8 @@ class ContraventionDetailsScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder:
                           (_) => AssignContraventionScreen(
-                            contraventionId: contravention.rowid ?? 0,
-                            motif: contravention.motif,
+                            contraventionId: widget.contravention.rowid ?? 0,
+                            motif: widget.contravention.motif,
                           ),
                     ),
                   );
@@ -100,18 +158,24 @@ class ContraventionDetailsScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ClasserSansSuiteScreen(
-                            contravention: contravention,
-                          ),
+                          builder:
+                              (_) => ClasserSansSuiteScreen(
+                                contravention: widget.contravention,
+                              ),
                         ),
                       );
                     },
                     child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       child: Text('Classer sans suite'),
                     ),
                   ),
@@ -125,14 +189,18 @@ class ContraventionDetailsScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => AccepterContraventionScreen(
-                            contravention: contravention,
-                          ),
+                          builder:
+                              (_) => AccepterContraventionScreen(
+                                contravention: widget.contravention,
+                              ),
                         ),
                       );
                     },
                     child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       child: Text('Accepter'),
                     ),
                   ),
@@ -167,7 +235,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
             children: [
               Text('Date & heure', style: TextStyle(color: Colors.white70)),
               Text(
-                contravention.dateTime,
+                widget.contravention.dateTime,
                 style: const TextStyle(color: Colors.white),
               ),
             ],
@@ -187,7 +255,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  contravention.motif,
+                  widget.contravention.motif,
                   style: const TextStyle(
                     color: AppTheme.purpleAccent,
                     fontWeight: FontWeight.w600,
@@ -204,7 +272,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
               const SizedBox(width: 8),
               Text('Agent: ', style: TextStyle(color: Colors.white70)),
               Text(
-                contravention.userAuthor,
+                widget.contravention.userAuthor,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -216,7 +284,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
           const Divider(color: Colors.white12),
           const SizedBox(height: 8),
           Text(
-            contravention.description,
+            widget.contravention.description,
             style: const TextStyle(color: Colors.white70),
           ),
         ],
@@ -225,13 +293,23 @@ class ContraventionDetailsScreen extends StatelessWidget {
   }
 
   Widget _personCard(BuildContext context) {
-    // 🎯 UTILISER LES VRAIES DONNÉES DE LA CONTRAVENTION
-    // PAS DE DONNÉES HARDCODÉES !
+    // 🎯 UTILISER LES DONNÉES CHARGÉES DU CSV
+    String residentName;
+    String residentAdresse;
 
-    // Le backend devrait envoyer residentName et residentAdresse
-    // Si votre modèle Contravention ne les a pas encore, utilisez 'tiers' temporairement
-    String residentName = contravention.residentName ?? 'Résident inconnu';
-    String residentAdresse = contravention.residentAdresse ?? 'Adresse inconnue';
+    if (_isLoadingResident) {
+      residentName = 'Chargement...';
+      residentAdresse = '';
+    } else if (_mockResident != null) {
+      // ✅ Données trouvées dans le CSV
+      residentName = _mockResident!.fullName;
+      residentAdresse = _mockResident!.adresse;
+    } else {
+      // ⚠️ Pas trouvé dans le CSV - utiliser les données de base
+      residentName = widget.contravention.residentName ?? 'Résident inconnu';
+      residentAdresse =
+          widget.contravention.residentAdresse ?? 'Adresse inconnue';
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -318,7 +396,7 @@ class ContraventionDetailsScreen extends StatelessWidget {
               ),
             ),
             Text(
-              '${contravention.media.length} éléments',
+              '${widget.contravention.media.length} éléments',
               style: const TextStyle(color: Colors.white54),
             ),
           ],
@@ -332,9 +410,9 @@ class ContraventionDetailsScreen extends StatelessWidget {
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
           ),
-          itemCount: contravention.media.length,
+          itemCount: widget.contravention.media.length,
           itemBuilder: (context, index) {
-            final media = contravention.media[index];
+            final media = widget.contravention.media[index];
             final url = media.mediaUrl;
             final isVideo = media.mediaType.toLowerCase().contains('video');
 

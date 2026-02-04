@@ -3,6 +3,7 @@ import 'package:infractions_app/models/contravention_recidive_models.dart';
 import '../config/app_theme.dart';
 import '../models/contravention_models.dart';
 import '../services/api_service.dart';
+import '../services/resident_mock_service.dart';
 
 class AccepterContraventionScreen extends StatefulWidget {
   final Contravention contravention;
@@ -23,34 +24,37 @@ class AccepterContraventionScreen extends StatefulWidget {
 
 class _AccepterContraventionScreenState
     extends State<AccepterContraventionScreen> {
-  
   // This will never be null after initState
-  late ContraventionRecidiveModels _computedRecidive; 
+  late ContraventionRecidiveModels _computedRecidive;
   bool _sendEmail = false;
+  MockResident? _mockResident;
+  bool _isLoadingResident = true;
 
   @override
   void initState() {
     super.initState();
+    _loadResidentData();
 
     // 1. Logic to determine the Recidive Model
     if (widget.contraventionRecidive != null) {
       _computedRecidive = widget.contraventionRecidive!;
     } else {
       // Calculate from history or default to 1 (First Time)
-      int count = 1; 
+      int count = 1;
       if (widget.history != null) {
         final motif = widget.contravention.motif.trim().toLowerCase();
-        final prevCount = widget.history!
-            .where((c) => c.motif.trim().toLowerCase() == motif)
-            .length;
+        final prevCount =
+            widget.history!
+                .where((c) => c.motif.trim().toLowerCase() == motif)
+                .length;
         count = prevCount + 1;
       }
 
       // Create the model (Defaulting to 1 if no history found)
       _computedRecidive = ContraventionRecidiveModels(
         label: widget.contravention.motif,
-        nombrerecidive: count, 
-        montant1: 50,  // Example values, replace with real logic if needed
+        nombrerecidive: count,
+        montant1: 50, // Example values, replace with real logic if needed
         montant2: 100,
         montant3: 200,
         montant4: 500,
@@ -58,10 +62,62 @@ class _AccepterContraventionScreenState
     }
   }
 
+  /// 🎯 MÉTHODE CLÉE - Charge les données du résident depuis le CSV
+  Future<void> _loadResidentData() async {
+    try {
+      print(
+        '📋 Chargement résident pour contravention ${widget.contravention.ref}',
+      );
+
+      // Extraire chambre et bâtiment depuis la contravention
+      final extracted = ResidentMockService.extractRoomAndBuilding(
+        widget.contravention.residentAdresse,
+      );
+
+      final numeroChambre = extracted['chamber'];
+      final batiment = extracted['building'];
+
+      print('🔍 Extracted: Chambre=$numeroChambre, Bâtiment=$batiment');
+
+      if (numeroChambre != null && batiment != null) {
+        final resident = await ResidentMockService.findResidentByRoom(
+          numeroChambre,
+          batiment,
+        );
+
+        setState(() {
+          _mockResident = resident;
+          _isLoadingResident = false;
+        });
+      } else {
+        print('⚠️ Impossible d\'extraire chambre/bâtiment de l\'adresse');
+        setState(() {
+          _isLoadingResident = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur chargement résident: $e');
+      setState(() {
+        _isLoadingResident = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = _computedRecidive;
     final bool isRecidive = r.nombrerecidive > 1;
+
+    // Déterminer le nom du résident à afficher
+    String residentName;
+    if (_isLoadingResident) {
+      residentName = 'Chargement...';
+    } else if (_mockResident != null) {
+      residentName = _mockResident!.fullName;
+    } else {
+      residentName =
+          widget.contravention.residentName ?? widget.contravention.userAuthor;
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.darkBgAlt,
@@ -106,29 +162,44 @@ class _AccepterContraventionScreenState
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.darkBg, 
+                    color: AppTheme.darkBg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.borderColor.withOpacity(0.5)),
+                    border: Border.all(
+                      color: AppTheme.borderColor.withOpacity(0.5),
+                    ),
                   ),
                   child: Column(
                     children: [
-                      _buildInfoRow('Infraction', '#${widget.contravention.ref}', isBold: true),
+                      _buildInfoRow(
+                        'Infraction',
+                        '#${widget.contravention.ref}',
+                        isBold: true,
+                      ),
                       const SizedBox(height: 12),
-                      _buildInfoRow('Résident', widget.contravention.userAuthor),
+                      _buildInfoRow('Résident', residentName),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Motif', style: TextStyle(color: AppTheme.textSecondary)),
+                          Text(
+                            'Motif',
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.deepPurple.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               widget.contravention.motif,
-                              style: const TextStyle(color: Colors.purpleAccent, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.purpleAccent,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
@@ -140,16 +211,14 @@ class _AccepterContraventionScreenState
                 const SizedBox(height: 20),
 
                 // --- DYNAMIC CARD (Recidive VS First Time) ---
-                if (isRecidive) 
+                if (isRecidive)
                   _buildRecidiveCard(r)
-                else 
+                else
                   _buildFirstTimeCard(r),
 
                 const SizedBox(height: 20),
 
                 // Checkbox
-                
-
                 const SizedBox(height: 24),
 
                 // Confirm Button
@@ -160,12 +229,12 @@ class _AccepterContraventionScreenState
                     color: const Color(0xFF1DB954), // Spotify Green
                     borderRadius: BorderRadius.circular(25),
                     boxShadow: [
-                       BoxShadow(
+                      BoxShadow(
                         color: const Color(0xFF1DB954).withOpacity(0.3),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
-                    ]
+                    ],
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -228,7 +297,10 @@ class _AccepterContraventionScreenState
                 TextSpan(text: '${r.nombrerecidive}ème infraction pour '),
                 TextSpan(
                   text: '${r.label}.',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -242,14 +314,17 @@ class _AccepterContraventionScreenState
           _buildMontantRow('3ème fois:', r.montant3, r.nombrerecidive == 3),
           const SizedBox(height: 4),
           _buildMontantRow('4ème fois:', r.montant4, r.nombrerecidive >= 4),
-          
+
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12.0),
             child: Divider(color: Colors.orange.withOpacity(0.3)),
           ),
 
           const Center(
-            child: Text('Montant à facturer', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            child: Text(
+              'Montant à facturer',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
           ),
           Center(
             child: Text(
@@ -301,19 +376,25 @@ class _AccepterContraventionScreenState
                 const TextSpan(text: "Il s'agit de la 1ère infraction pour "),
                 TextSpan(
                   text: '${r.label}.',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12.0),
             child: Divider(color: Colors.blueAccent.withOpacity(0.3)),
           ),
 
           const Center(
-            child: Text('Montant à facturer', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            child: Text(
+              'Montant à facturer',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
           ),
           Center(
             child: Text(
@@ -337,23 +418,23 @@ class _AccepterContraventionScreenState
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.purpleAccent),
-          ),
-        ),
+        builder:
+            (context) => Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.purpleAccent,
+                ),
+              ),
+            ),
       );
 
       // Appeler l'endpoint de confirmation et génération de PDF
       final apiService = ApiService();
       final ref = widget.contravention.ref;
-      
+
       print('DEBUG: Calling confirm endpoint for ref: $ref');
-      
-      final response = await apiService.post(
-        '/contravention/$ref/confirm',
-        {},
-      );
+
+      final response = await apiService.post('/contravention/$ref/confirm', {});
 
       print('DEBUG: Response status: ${response.statusCode}');
       print('DEBUG: Response data: ${response.data}');
@@ -372,7 +453,7 @@ class _AccepterContraventionScreenState
             duration: const Duration(seconds: 3),
           ),
         );
-        
+
         // Attendre un peu puis retourner à l'écran précédent
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) {
@@ -383,7 +464,7 @@ class _AccepterContraventionScreenState
       }
     } catch (e) {
       print('DEBUG: Error in _onConfirm: $e');
-      
+
       // Fermer le dialog de chargement s'il est encore ouvert
       if (mounted && Navigator.canPop(context)) {
         Navigator.of(context).pop();
@@ -404,10 +485,15 @@ class _AccepterContraventionScreenState
 
   int _montantValue(ContraventionRecidiveModels r) {
     switch (r.nombrerecidive) {
-      case 1: return r.montant1;
-      case 2: return r.montant2;
-      case 3: return r.montant3;
-      case 4: default: return r.montant4;
+      case 1:
+        return r.montant1;
+      case 2:
+        return r.montant2;
+      case 3:
+        return r.montant3;
+      case 4:
+      default:
+        return r.montant4;
     }
   }
 
@@ -429,12 +515,13 @@ class _AccepterContraventionScreenState
 
   Widget _buildMontantRow(String label, int value, bool highlighted) {
     return Container(
-      decoration: highlighted 
-        ? BoxDecoration(
-            color: Colors.orange.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(4)
-          )
-        : null,
+      decoration:
+          highlighted
+              ? BoxDecoration(
+                color: Colors.orange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              )
+              : null,
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

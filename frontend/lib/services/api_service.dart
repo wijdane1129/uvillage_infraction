@@ -24,7 +24,7 @@ class ApiService {
     if (kIsWeb) {
       return 'http://localhost:8080';
     } else {
-      return 'http://192.168.68.119:8080';
+      return 'http://192.168.68.191:8080';
     }
   }
 

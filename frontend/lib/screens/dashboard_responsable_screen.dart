@@ -16,7 +16,8 @@ class DashboardResponsableScreen extends StatefulWidget {
       _DashboardResponsableScreenState();
 }
 
-class _DashboardResponsableScreenState extends State<DashboardResponsableScreen> {
+class _DashboardResponsableScreenState
+    extends State<DashboardResponsableScreen> {
   DashboardResponsable? dashboard;
   bool isLoading = true;
   String? error;
@@ -61,61 +62,60 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBg,
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: AppTheme.purpleAccent,
-              ),
-            )
-          : error != null
+      body:
+          isLoading
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Erreur: $error',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: loadDashboard,
-                        child: const Text('Réessayer'),
-                      ),
-                    ],
-                  ),
-                )
+                child: CircularProgressIndicator(color: AppTheme.purpleAccent),
+              )
+              : error != null
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Erreur: $error',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: loadDashboard,
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              )
               : RefreshIndicator(
-                  onRefresh: loadDashboard,
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header
-                          _buildHeader(context),
-                          const SizedBox(height: 24),
+                onRefresh: loadDashboard,
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        _buildHeader(context),
+                        const SizedBox(height: 24),
 
-                          // Stats Cards
-                          _buildStatsCards(),
-                          const SizedBox(height: 24),
+                        // Stats Cards
+                        _buildStatsCards(),
+                        const SizedBox(height: 24),
 
-                          // Chart
-                          _buildChartSection(),
-                          const SizedBox(height: 24),
+                        // Chart
+                        _buildChartSection(),
+                        const SizedBox(height: 24),
 
-                          // Quick Actions
-                          _buildQuickActions(),
-                          const SizedBox(height: 24),
+                        // Quick Actions
+                        _buildQuickActions(),
+                        const SizedBox(height: 24),
 
-                          // Recent Infractions
-                          _buildRecentInfractions(),
-                        ],
-                      ),
+                        // Recent Infractions
+                        _buildRecentInfractions(),
+                      ],
                     ),
                   ),
                 ),
+              ),
     );
   }
 
@@ -138,10 +138,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
             color: AppTheme.purpleAccent.withOpacity(0.2),
             borderRadius: BorderRadius.circular(50),
           ),
-          child: Icon(
-            Icons.notifications_none,
-            color: AppTheme.purpleAccent,
-          ),
+          child: Icon(Icons.notifications_none, color: AppTheme.purpleAccent),
         ),
       ],
     );
@@ -185,15 +182,18 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.darkBgAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -237,9 +237,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
       decoration: BoxDecoration(
         color: AppTheme.darkBgAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,25 +295,23 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
                 borderData: FlBorderData(
                   show: true,
                   border: Border(
-                    bottom: BorderSide(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                    left: BorderSide(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
+                    bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+                    left: BorderSide(color: Colors.white.withOpacity(0.1)),
                   ),
                 ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: dashboard!.chartData
-                        .map((e) => FlSpot(e.day.toDouble(), e.count.toDouble()))
-                        .toList(),
+                    spots:
+                        dashboard!.chartData
+                            .map(
+                              (e) =>
+                                  FlSpot(e.day.toDouble(), e.count.toDouble()),
+                            )
+                            .toList(),
                     isCurved: true,
                     color: AppTheme.purpleAccent,
                     barWidth: 3,
-                    dotData: FlDotData(
-                      show: false,
-                    ),
+                    dotData: FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
                       color: AppTheme.purpleAccent.withOpacity(0.2),
@@ -372,16 +368,18 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
     );
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color bgColor,
-      VoidCallback onPressed) {
+  Widget _buildActionButton(
+    String label,
+    IconData icon,
+    Color bgColor,
+    VoidCallback onPressed,
+  ) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: bgColor,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -390,10 +388,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -449,9 +444,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
       decoration: BoxDecoration(
         color: AppTheme.darkBgAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,7 +461,10 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: infraction.getStatusColor().withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -494,10 +490,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
           ),
           Text(
             '${infraction.motif} - Stationnement interdit',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
           const SizedBox(height: 12),
           Row(
@@ -535,14 +528,17 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
                     userAuthor: infraction.agentName,
                     tiers: infraction.residentName,
                     motif: infraction.motif,
+                    residentAdresse: infraction.residentAdresse,
+                    residentName: infraction.residentName,
                   );
-                  
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ContraventionDetailsScreen(
-                        contravention: contravention,
-                      ),
+                      builder:
+                          (context) => ContraventionDetailsScreen(
+                            contravention: contravention,
+                          ),
                     ),
                   );
                 },
@@ -558,10 +554,7 @@ class _DashboardResponsableScreenState extends State<DashboardResponsableScreen>
                 ),
                 child: const Text(
                   'Traiter',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ],

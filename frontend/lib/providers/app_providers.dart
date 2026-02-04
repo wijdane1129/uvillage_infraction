@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 // Définition de l'URL de base pour l'API
-const String _baseUrl = 'http://192.168.68.100:8080/api/v1'; 
+const String _baseUrl = 'http://192.168.68.191:8080/api/v1'; 
 
 final dioProvider = Provider<Dio>((ref) {
   final box = Hive.box('authBox');

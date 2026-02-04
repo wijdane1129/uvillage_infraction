@@ -13,20 +13,23 @@ class DashboardStats {
     required this.typeDistribution,
     required this.zoneInfractions,
   });
-  factory DashboardStats.fromJson(Map<String,dynamic> json){
-    final Map<String, int> parsedMonthly = (json['monthlyInfractions'] as Map<String, dynamic>)
+  factory DashboardStats.fromJson(Map<String, dynamic> json) {
+    final Map<String, int> parsedMonthly = (json['monthlyInfractions']
+            as Map<String, dynamic>)
         .map((key, value) => MapEntry(key, value as int));
-    
-    final Map<String, int> parsedZone = (json['zoneInfractions'] as Map<String, dynamic>)
+
+    final Map<String, int> parsedZone = (json['zoneInfractions']
+            as Map<String, dynamic>)
         .map((key, value) => MapEntry(key, value as int));
 
     return DashboardStats(
       totalInfractions: json['totalInfractions'] as int,
       resolvedInfractions: json['resolvedInfractions'] as int,
       monthlyInfractions: parsedMonthly,
-      typeDistribution: (json['typeDistribution'] as List)
-          .map((i) => TypeDistribution.fromJson(i as Map<String, dynamic>))
-          .toList(),
+      typeDistribution:
+          (json['typeDistribution'] as List)
+              .map((i) => TypeDistribution.fromJson(i as Map<String, dynamic>))
+              .toList(),
       zoneInfractions: parsedZone,
     );
   }
@@ -68,23 +71,31 @@ class DashboardResponsable {
 
   factory DashboardResponsable.fromJson(Map<String, dynamic> json) {
     try {
-      final Map<String, int> parsedStatus = ((json['statusDistribution'] as Map<String, dynamic>?) ?? {})
-          .map((key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0));
+      final Map<String, int> parsedStatus =
+          ((json['statusDistribution'] as Map<String, dynamic>?) ?? {}).map(
+            (key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0),
+          );
 
       final List<dynamic> chartList = (json['chartData'] as List?) ?? [];
-      final List<dynamic> infractionList = (json['recentInfractions'] as List?) ?? [];
+      final List<dynamic> infractionList =
+          (json['recentInfractions'] as List?) ?? [];
 
       return DashboardResponsable(
         totalInfractions: (json['totalInfractions'] as num?)?.toInt() ?? 0,
         pendingInfractions: (json['pendingInfractions'] as num?)?.toInt() ?? 0,
         acceptedThisMonth: (json['acceptedThisMonth'] as num?)?.toInt() ?? 0,
         totalFines: (json['totalFines'] as num?)?.toDouble() ?? 0.0,
-        chartData: chartList
-            .map((e) => ChartDataPoint.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        recentInfractions: infractionList
-            .map((e) => RecentContravention.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        chartData:
+            chartList
+                .map((e) => ChartDataPoint.fromJson(e as Map<String, dynamic>))
+                .toList(),
+        recentInfractions:
+            infractionList
+                .map(
+                  (e) =>
+                      RecentContravention.fromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
         statusDistribution: parsedStatus,
       );
     } catch (e) {
@@ -110,10 +121,7 @@ class ChartDataPoint {
   ChartDataPoint({required this.day, required this.count});
 
   factory ChartDataPoint.fromJson(Map<String, dynamic> json) {
-    return ChartDataPoint(
-      day: json['day'] as int,
-      count: json['count'] as int,
-    );
+    return ChartDataPoint(day: json['day'] as int, count: json['count'] as int);
   }
 }
 
@@ -126,6 +134,7 @@ class RecentContravention {
   final String statut;
   final String agentName;
   final String residentName;
+  final String? residentAdresse;
   final double montantAmende;
 
   RecentContravention({
@@ -137,6 +146,7 @@ class RecentContravention {
     required this.statut,
     required this.agentName,
     required this.residentName,
+    this.residentAdresse,
     required this.montantAmende,
   });
 
@@ -146,10 +156,12 @@ class RecentContravention {
       ref: json['ref'] as String? ?? 'N/A',
       motif: json['motif'] as String? ?? 'N/A',
       description: json['description'] as String? ?? '',
-      dateCreation: json['dateCreation'] as String? ?? DateTime.now().toIso8601String(),
+      dateCreation:
+          json['dateCreation'] as String? ?? DateTime.now().toIso8601String(),
       statut: json['statut'] as String? ?? 'SOUS_VERIFICATION',
       agentName: json['agentName'] as String? ?? 'Unknown',
       residentName: json['residentName'] as String? ?? 'Unknown',
+      residentAdresse: json['residentAdresse'] as String?,
       montantAmende: (json['montantAmende'] as num? ?? 0).toDouble(),
     );
   }

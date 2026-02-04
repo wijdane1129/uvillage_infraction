@@ -9,7 +9,7 @@ class UserProfileService {
   late final String baseUrl =
       kIsWeb
           ? 'http://localhost:8080/api/auth'
-          : 'http://192.168.68.119:8080/api/auth';
+          : 'http://192.168.68.191:8080/api/auth';
 
   UserProfileService({required this.dio});
 
