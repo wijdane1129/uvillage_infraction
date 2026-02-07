@@ -183,7 +183,7 @@ class _ClasserSansSuiteScreenState extends State<ClasserSansSuiteScreen> {
                                   ? _motifController.text
                                   : _selectedReason,
                           'notify': _notifyUser,
-                        });
+                        } as Map<String, dynamic>);
                       },
                       borderRadius: BorderRadius.circular(14),
                       child: const Padding(

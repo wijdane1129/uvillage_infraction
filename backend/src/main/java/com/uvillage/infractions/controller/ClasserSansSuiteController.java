@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/contravention")
+@RequestMapping("/api/v1/contravention")
 public class ClasserSansSuiteController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClasserSansSuiteController.class);

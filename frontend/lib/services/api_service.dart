@@ -48,6 +48,14 @@ class ApiService {
     }
   }
 
+  Future<Response> put(String path, dynamic data) async {
+    try {
+      return await _dio.put(path, data: data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<Response> get(String path) async {
     try {
       // Special-case dashboard endpoints which in backend are under `/api/dashboard` (no /v1)

@@ -3,6 +3,7 @@ import 'package:infractions_app/screens/classer_sans_suite_screen.dart';
 import '../config/app_theme.dart';
 import '../models/contravention_models.dart';
 import '../services/resident_mock_service.dart';
+import '../services/api_service.dart';
 import 'media_viewer.dart';
 import 'accepter_contravention_screen.dart';
 import 'assign_contravention_screen.dart';
@@ -161,8 +162,8 @@ class _ContraventionDetailsScreenState
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                     ),
-                    onPressed: () {
-                      Navigator.of(context).push(
+                    onPressed: () async {
+                      final result = await Navigator.of(context).push<Map<String, dynamic>>(
                         MaterialPageRoute(
                           builder:
                               (_) => ClasserSansSuiteScreen(
@@ -170,6 +171,36 @@ class _ContraventionDetailsScreenState
                               ),
                         ),
                       );
+
+                      if (result != null) {
+                        final motif = result['motif'] as String? ?? '';
+                        try {
+                          final apiService = ApiService();
+                          await apiService.put(
+                            '/contravention/classer-sans-suite/${widget.contravention.ref}',
+                            {'motif': motif},
+                          );
+                          
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Contravention classée sans suite'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.of(context).pop();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      }
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(

@@ -113,6 +113,10 @@ public class Contravention {
         this.description = description;
     }
 
+    public void setStatut(Status statut) {
+        this.statut = statut;
+    }
+
     public void setDateCreation(LocalDate dateCreation) {
         this.dateCreation = dateCreation;
     }
