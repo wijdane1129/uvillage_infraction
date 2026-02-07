@@ -32,10 +32,11 @@ public class InvoicePdfService {
     /**
      * Génère une facture PDF pour une contravention confirmée
      * @param contravention La contravention à facturer
+     * @param mockResident Données du résident mock (peut être null)
      * @return Le chemin du fichier PDF généré
      * @throws IOException En cas d'erreur lors de la génération du PDF
      */
-    public String generateInvoicePdf(Contravention contravention) throws IOException {
+    public String generateInvoicePdf(Contravention contravention, ResidentMockService.MockResident mockResident) throws IOException {
         logger.info("Starting PDF generation for contravention: {}", contravention.getRef());
         
         // Créer le répertoire s'il n'existe pas
@@ -63,7 +64,7 @@ public class InvoicePdfService {
             
             // Ajouter le contenu du PDF
             logger.info("Adding content to PDF...");
-            addInvoiceContent(document, contravention, refFacture);
+            addInvoiceContent(document, contravention, refFacture, mockResident);
             logger.info("Content added successfully");
             
             document.close();
@@ -79,7 +80,7 @@ public class InvoicePdfService {
     /**
      * Ajoute le contenu de la facture au document PDF
      */
-    private void addInvoiceContent(Document document, Contravention contravention, String refFacture) throws DocumentException {
+    private void addInvoiceContent(Document document, Contravention contravention, String refFacture, ResidentMockService.MockResident mockResident) throws DocumentException {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         
         Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
@@ -156,14 +157,17 @@ public class InvoicePdfService {
         PdfPTable residentTable = new PdfPTable(2);
         residentTable.setWidthPercentage(100);
 
-        if (contravention.getTiers() != null) {
+        if (mockResident != null) {
+            addTableRow(residentTable, "Nom:", mockResident.getNom() != null ? mockResident.getNom() : "Non spécifié", headerFont, normalFont);
+            addTableRow(residentTable, "Prénom:", mockResident.getPrenom() != null ? mockResident.getPrenom() : "Non spécifié", headerFont, normalFont);
+            addTableRow(residentTable, "Chambre:", mockResident.getNumeroChambre() != null ? mockResident.getNumeroChambre() : "Non spécifié", headerFont, normalFont);
+            addTableRow(residentTable, "Bâtiment:", mockResident.getBatiment() != null ? mockResident.getBatiment() : "Non spécifié", headerFont, normalFont);
+            addTableRow(residentTable, "Filière:", mockResident.getFiliere() != null ? mockResident.getFiliere() : "Non spécifié", headerFont, normalFont);
+        } else if (contravention.getTiers() != null) {
             Resident resident = contravention.getTiers();
             addTableRow(residentTable, "Nom:", resident.getNomResident() != null ? resident.getNomResident() : "Non spécifié", headerFont, normalFont);
             addTableRow(residentTable, "Email:", resident.getEmail() != null ? resident.getEmail() : "Non spécifié", headerFont, normalFont);
             addTableRow(residentTable, "Téléphone:", resident.getTelephone() != null ? resident.getTelephone() : "Non spécifié", headerFont, normalFont);
-            if (resident.getChambre() != null) {
-                addTableRow(residentTable, "Chambre:", resident.getChambre().toString(), headerFont, normalFont);
-            }
         } else {
             addTableRow(residentTable, "Résident:", "Non spécifié", headerFont, normalFont);
         }

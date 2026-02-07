@@ -85,10 +85,13 @@ public class ContraventionController {
     // ---------- Confirm contravention ----------
     @PostMapping("/ref/{ref}/confirm")
     @PreAuthorize("hasRole('RESPONSABLE')")
-    public ResponseEntity<?> confirmContravention(@PathVariable String ref) {
+    public ResponseEntity<?> confirmContravention(
+            @PathVariable String ref,
+            @RequestParam(required = false) String numeroChambre,
+            @RequestParam(required = false) String batiment) {
         try {
             logger.info("Confirming contravention with ref: {}", ref);
-            ContraventionDTO dto = contraventionService.confirmContravention(ref);
+            ContraventionDTO dto = contraventionService.confirmContravention(ref, numeroChambre, batiment);
             logger.info("Contravention {} confirmed successfully", ref);
 
             Map<String, Object> response = new HashMap<>();

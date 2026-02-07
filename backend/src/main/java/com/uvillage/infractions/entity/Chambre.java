@@ -31,4 +31,12 @@ public class Chambre {
     public void setNumeroChambre(String numero) {
         this.numero = numero;
     }
+
+    public Immeuble getImmeuble() {
+        return this.immeuble;
+    }
+
+    public void setImmeuble(Immeuble immeuble) {
+        this.immeuble = immeuble;
+    }
 }

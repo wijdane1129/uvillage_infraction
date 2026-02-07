@@ -21,4 +21,12 @@ public class Immeuble {
 
     @OneToMany(mappedBy="immeuble")
     private List<Chambre> chambres;
+
+    public String getNom() {
+        return this.nom;
+    }
+
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
 }

@@ -434,7 +434,18 @@ class _AccepterContraventionScreenState
 
       print('DEBUG: Calling confirm endpoint for ref: $ref');
 
-      final response = await apiService.post('/contravention/$ref/confirm', {});
+      // Extract room and building info for the API request
+      final extracted = ResidentMockService.extractRoomAndBuilding(
+        widget.contravention.residentAdresse,
+      );
+      final numeroChambre = extracted['chamber'];
+      final batiment = extracted['building'];
+
+      final response = await apiService
+          .post('/contraventions/ref/$ref/confirm', {
+            if (numeroChambre != null) 'numeroChambre': numeroChambre,
+            if (batiment != null) 'batiment': batiment,
+          });
 
       print('DEBUG: Response status: ${response.statusCode}');
       print('DEBUG: Response data: ${response.data}');

@@ -101,7 +101,7 @@ public class SecurityConfig {
                 // Creating contraventions allowed for authenticated (agents)
                 .requestMatchers(HttpMethod.POST, "/api/v1/contraventions").authenticated()
                 // Confirming a contravention (invoice generation) reserved to responsable
-                .requestMatchers(HttpMethod.POST, "/api/v1/contraventions/ref/**/confirm").hasRole("RESPONSABLE")
+                .requestMatchers(HttpMethod.POST, "/api/v1/contraventions/**confirm").hasRole("RESPONSABLE")
 
                 // Swagger
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

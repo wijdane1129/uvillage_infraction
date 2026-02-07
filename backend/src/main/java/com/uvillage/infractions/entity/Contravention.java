@@ -54,6 +54,12 @@ public class Contravention {
     @JoinColumn(name="fk_chambre")
     private Chambre chambre;
 
+    @Column(name="numero_chambre")
+    private String numeroChambre;
+
+    @Column(name="batiment")
+    private String batiment;
+
     @OneToMany(mappedBy="contravention", cascade=CascadeType.ALL)
     private List<ContraventionMedia> media;
 
@@ -84,6 +90,22 @@ public class Contravention {
 
     public Chambre getChambre() {
         return this.chambre;
+    }
+
+    public String getNumeroChambre() {
+        return this.numeroChambre;
+    }
+
+    public void setNumeroChambre(String numeroChambre) {
+        this.numeroChambre = numeroChambre;
+    }
+
+    public String getBatiment() {
+        return this.batiment;
+    }
+
+    public void setBatiment(String batiment) {
+        this.batiment = batiment;
     }
 
     // Explicit setters to avoid Lombok reliance in IDE/processor

@@ -38,6 +38,9 @@ public class ContraventionService {
     private InvoicePdfService invoicePdfService;
 
     @Autowired
+    private ResidentMockService residentMockService;
+
+    @Autowired
     public ContraventionService(ContraventionRepository contraventionRepository,
                                 FactureRepository factureRepository) {
         this.contraventionRepository = contraventionRepository;
@@ -83,6 +86,8 @@ public class ContraventionService {
         c.setDescription(req.getDescription());
         c.setDateCreation(LocalDate.now());
         c.setRef("CV-" + System.currentTimeMillis());
+        c.setNumeroChambre(req.getNumeroChambre());
+        c.setBatiment(req.getBatiment());
 
         if (req.getUserAuthorId() != null) {
             userRepository.findById(req.getUserAuthorId()).ifPresent(c::setUserAuthor);
@@ -128,23 +133,41 @@ public class ContraventionService {
     /**
      * Confirme une contravention et génère une facture PDF
      * @param ref La référence de la contravention
+     * @param numeroChambre Le numéro de chambre du résident (optionnel)
+     * @param batiment Le bâtiment du résident (optionnel)
      * @return La contravention mise à jour avec l'URL du PDF
      * @throws IOException En cas d'erreur lors de la génération du PDF
      */
     @Transactional
-    public ContraventionDTO confirmContravention(String ref) throws IOException {
+    public ContraventionDTO confirmContravention(String ref, String numeroChambre, String batiment) throws IOException {
         Contravention contravention = contraventionRepository.findByRef(ref)
                 .orElseThrow(() -> new RuntimeException("Contravention non trouvée: " + ref));
 
         contravention.setStatut(Contravention.Status.ACCEPTEE);
+        
+        // Store room and building info if provided
+        if (numeroChambre != null && !numeroChambre.isEmpty()) {
+            contravention.setNumeroChambre(numeroChambre);
+        }
+        if (batiment != null && !batiment.isEmpty()) {
+            contravention.setBatiment(batiment);
+        }
 
-        // Générer le PDF
-        String pdfUrl = invoicePdfService.generateInvoicePdf(contravention);
+        // Load mock resident from CSV data using room/building info
+        ResidentMockService.MockResident mockResident = null;
+        String roomNum = contravention.getNumeroChambre();
+        String building = contravention.getBatiment();
+        if (roomNum != null && building != null) {
+            mockResident = residentMockService.findByRoom(roomNum, building);
+        }
 
-        // Créer et sauvegarder la facture
+        // Générer le PDF avec les données du résident mock
+        String pdfUrl = invoicePdfService.generateInvoicePdf(contravention, mockResident);
+
+        // Créer et sauvegarder la facture (resident peut être null pour maintenant)
         Facture facture = Facture.builder()
                 .refFacture("FAC-" + contravention.getRef() + "-" + UUID.randomUUID().toString().substring(0, 8))
-                .resident(contravention.getTiers())
+                .resident(contravention.getTiers())  // Laisse null pour maintenant
                 .dateCreation(LocalDateTime.now())
                 .montantTotal(contravention.getTypeContravention() != null
                         ? contravention.getTypeContravention().getMontant1()

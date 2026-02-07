@@ -8,6 +8,8 @@ public class CreateContraventionRequest {
     private Long userAuthorId;
     private Long tiersId; // optional resident id
     private List<String> mediaUrls;
+    private String numeroChambre; // room number for CSV lookup
+    private String batiment; // building name for CSV lookup
 
     public CreateContraventionRequest() {}
 
@@ -25,4 +27,10 @@ public class CreateContraventionRequest {
 
     public List<String> getMediaUrls() { return mediaUrls; }
     public void setMediaUrls(List<String> mediaUrls) { this.mediaUrls = mediaUrls; }
+
+    public String getNumeroChambre() { return numeroChambre; }
+    public void setNumeroChambre(String numeroChambre) { this.numeroChambre = numeroChambre; }
+
+    public String getBatiment() { return batiment; }
+    public void setBatiment(String batiment) { this.batiment = batiment; }
 }

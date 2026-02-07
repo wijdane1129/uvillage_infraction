@@ -50,7 +50,7 @@ public class ResidentMockService {
     @PostConstruct
     public void loadResidents() {
         try {
-            ClassPathResource resource = new ClassPathResource("data/compus_euromed_chambres.csv");
+            ClassPathResource resource = new ClassPathResource("data/campus_euromed_chambres.csv");
             
             try (CSVReader reader = new CSVReader(new InputStreamReader(resource.getInputStream()))) {
                 List<String[]> records = reader.readAll();
