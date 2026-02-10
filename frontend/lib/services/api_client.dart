@@ -16,7 +16,7 @@ class ApiClient {
       return 'http://localhost:8080/api/v1';
     } else {
       // Mobile (Android phone): use network IP
-      return 'http://192.168.68.191:8080/api/v1';
+      return 'http://192.168.11.157:8080/api/v1';
     }
   }
 

@@ -1,8 +1,8 @@
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/resident_models.dart';
 
 class ResidentService {
-  static const String _csvPath = 'data/compus_euromed_chambres.csv';
+  static const String _csvPath = 'assets/data/compus_euromed_chambres.csv';
 
   Future<List<Resident>> loadResidents() async {
     try {

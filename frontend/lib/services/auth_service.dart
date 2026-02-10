@@ -64,7 +64,7 @@ class AuthService {
       return 'http://localhost:8080';
     } else {
       // Mobile (Android phone): use network IP
-      return 'http://192.168.68.191:8080';
+      return 'http://192.168.11.157:8080';
     }
   }
 
