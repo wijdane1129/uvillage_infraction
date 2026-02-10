@@ -27,13 +27,112 @@ class AccepterContraventionScreen extends ConsumerStatefulWidget {
 
 class _AccepterContraventionScreenState
     extends ConsumerState<AccepterContraventionScreen> {
+  late ContraventionRecidiveModels _computedRecidive;
+  bool _sendEmail = false;
   MockResident? _mockResident;
   bool _isLoadingResident = true;
+  Motif? _motif;
+  bool _isLoadingMotif = true;
 
   @override
   void initState() {
     super.initState();
     _loadResidentData();
+    _loadMotifData();
+
+    // 1. Logic to determine the Recidive Model
+    if (widget.contraventionRecidive != null) {
+      _computedRecidive = widget.contraventionRecidive!;
+    } else {
+      // Calculate from history or default to 1 (First Time)
+      int count = 1;
+      if (widget.history != null) {
+        final motif = widget.contravention.motif.trim().toLowerCase();
+        final prevCount =
+            widget.history!
+                .where((c) => c.motif.trim().toLowerCase() == motif)
+                .length;
+        count = prevCount + 1;
+      }
+
+      // Will be replaced once motif is loaded
+      _computedRecidive = ContraventionRecidiveModels(
+        label: widget.contravention.motif,
+        nombrerecidive: count,
+        montant1: 50,
+        montant2: 100,
+        montant3: 200,
+        montant4: 500,
+      );
+    }
+  }
+
+  /// 🎯 Charge le motif depuis le provider et recalcule la récidive
+  Future<void> _loadMotifData() async {
+    try {
+      final motifsAsync = ref.read(motifStateProvider);
+
+      if (motifsAsync is AsyncData) {
+        final motifsList = motifsAsync.value;
+        if (motifsList == null || motifsList.isEmpty) {
+          setState(() {
+            _isLoadingMotif = false;
+          });
+          return;
+        }
+
+        final motif = motifsList.firstWhere(
+          (m) =>
+              m.nom.trim().toLowerCase() ==
+              widget.contravention.motif.trim().toLowerCase(),
+          orElse:
+              () => Motif(
+                id: -1,
+                nom: widget.contravention.motif,
+                montant1: 50,
+                montant2: 100,
+                montant3: 200,
+                montant4: 500,
+                dateCreation: DateTime.now(),
+                utilisations: 0,
+              ),
+        );
+
+        if (mounted) {
+          setState(() {
+            _motif = motif;
+            _isLoadingMotif = false;
+
+            // Recalculate recidive with motif montants
+            int count = 1;
+            if (widget.history != null) {
+              final motifStr = widget.contravention.motif.trim().toLowerCase();
+              final prevCount =
+                  widget.history!
+                      .where((c) => c.motif.trim().toLowerCase() == motifStr)
+                      .length;
+              count = prevCount + 1;
+            }
+
+            _computedRecidive = ContraventionRecidiveModels(
+              label: widget.contravention.motif,
+              nombrerecidive: count,
+              montant1: motif.montant1.toInt(),
+              montant2: motif.montant2.toInt(),
+              montant3: motif.montant3.toInt(),
+              montant4: motif.montant4.toInt(),
+            );
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur chargement motif: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingMotif = false;
+        });
+      }
+    }
   }
 
   /// 🎯 Charge les données du résident depuis le CSV
@@ -84,216 +183,153 @@ class _AccepterContraventionScreenState
 
   @override
   Widget build(BuildContext context) {
-    final motifsAsync = ref.watch(motifStateProvider);
+    final r = _computedRecidive;
+    final bool isRecidive = r.nombrerecidive > 1;
 
-    return motifsAsync.when(
-      loading:
-          () =>
-              const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error:
-          (err, stack) => Scaffold(body: Center(child: Text('Erreur: $err'))),
-      data: (motifs) {
-        // Calculer la récidive avec les montants du motif
-        final computedRecidive = _buildRecidiveFromMotifs(motifs);
-        final r = computedRecidive;
-        final bool isRecidive = r.nombrerecidive > 1;
+    String residentName;
+    if (_isLoadingResident) {
+      residentName = 'Chargement...';
+    } else if (_mockResident != null) {
+      residentName = _mockResident!.fullName;
+    } else {
+      residentName =
+          widget.contravention.residentName ?? widget.contravention.userAuthor;
+    }
 
-        String residentName;
-        if (_isLoadingResident) {
-          residentName = 'Chargement...';
-        } else if (_mockResident != null) {
-          residentName = _mockResident!.fullName;
-        } else {
-          residentName =
-              widget.contravention.residentName ??
-              widget.contravention.userAuthor;
-        }
-
-        return Scaffold(
-          backgroundColor: AppTheme.darkBgAlt,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          body: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 400),
-                decoration: BoxDecoration(
-                  color: AppTheme.darkBg,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.45),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
+    return Scaffold(
+      backgroundColor: AppTheme.darkBgAlt,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 400),
+            decoration: BoxDecoration(
+              color: AppTheme.darkBg,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.45),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 24,
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Confirmer l\'acceptation',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.purpleAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Confirmer l\'acceptation',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineSmall?.copyWith(
-                        color: AppTheme.purpleAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.darkBg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppTheme.borderColor.withOpacity(0.5),
-                        ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.darkBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.borderColor.withOpacity(0.5),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow(
+                        'Infraction',
+                        '#${widget.contravention.ref}',
+                        isBold: true,
                       ),
-                      child: Column(
+                      const SizedBox(height: 12),
+                      _buildInfoRow('Résident', residentName),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildInfoRow(
-                            'Infraction',
-                            '#${widget.contravention.ref}',
-                            isBold: true,
+                          Text(
+                            'Motif',
+                            style: TextStyle(color: AppTheme.textSecondary),
                           ),
-                          const SizedBox(height: 12),
-                          _buildInfoRow('Résident', residentName),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Motif',
-                                style: TextStyle(color: AppTheme.textSecondary),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.deepPurple.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  widget.contravention.motif,
-                                  style: const TextStyle(
-                                    color: Colors.purpleAccent,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    if (isRecidive)
-                      _buildRecidiveCard(r)
-                    else
-                      _buildFirstTimeCard(r),
-
-                    const SizedBox(height: 20),
-                    const SizedBox(height: 24),
-
-                    Container(
-                      width: double.infinity,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1DB954),
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1DB954).withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(25),
-                          onTap: _onConfirm,
-                          child: const Center(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Text(
-                              'Confirmer',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                              widget.contravention.motif,
+                              style: const TextStyle(
+                                color: Colors.purpleAccent,
+                                fontSize: 12,
                               ),
                             ),
                           ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                if (isRecidive)
+                  _buildRecidiveCard(r)
+                else
+                  _buildFirstTimeCard(r),
+
+                const SizedBox(height: 20),
+                const SizedBox(height: 24),
+
+                Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1DB954),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1DB954).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(25),
+                      onTap: _onConfirm,
+                      child: const Center(
+                        child: Text(
+                          'Confirmer',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  /// 🎯 Construire la récidive avec les montants du motif
-  ContraventionRecidiveModels _buildRecidiveFromMotifs(List<Motif> motifs) {
-    // Si déjà fourni comme paramètre
-    if (widget.contraventionRecidive != null) {
-      return widget.contraventionRecidive!;
-    }
-
-    // Chercher le motif correspondant
-    final motifLabel = widget.contravention.motif.trim().toLowerCase();
-    final motif = motifs.firstWhere(
-      (m) => m.nom.trim().toLowerCase() == motifLabel,
-      orElse:
-          () => Motif(
-            id: -1,
-            nom: widget.contravention.motif,
-            montant1: 50,
-            montant2: 100,
-            montant3: 200,
-            montant4: 500,
-            dateCreation: DateTime.now(),
-            utilisations: 0,
-          ),
-    );
-
-    // Calculer le nombre de récidives
-    int count = 1;
-    if (widget.history != null) {
-      final prevCount =
-          widget.history!
-              .where((c) => c.motif.trim().toLowerCase() == motifLabel)
-              .length;
-      count = prevCount + 1;
-    }
-
-    return ContraventionRecidiveModels(
-      label: widget.contravention.motif,
-      nombrerecidive: count,
-      montant1: motif.montant1.toInt(),
-      montant2: motif.montant2.toInt(),
-      montant3: motif.montant3.toInt(),
-      montant4: motif.montant4.toInt(),
+        ),
+      ),
     );
   }
 
