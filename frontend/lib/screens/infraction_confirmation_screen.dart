@@ -8,6 +8,8 @@ import '../providers/contravention_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/agent_auth_provider.dart';
 import 'agent_home_screen.dart';
+import 'media_player_screen.dart';
+import 'dart:io';
 
 class InfractionConfirmationScreen extends ConsumerWidget {
   // Debug: Test /contraventions/debug/whoami endpoint
@@ -184,7 +186,8 @@ class InfractionConfirmationScreen extends ConsumerWidget {
 
                     // Check if it was created offline or online
                     final isOffline = result['offline'] as bool? ?? false;
-                    final message = result['message'] as String? ??
+                    final message =
+                        result['message'] as String? ??
                         (isOffline
                             ? 'Infraction créée en mode hors ligne'
                             : 'Infraction créée');
@@ -249,24 +252,144 @@ class InfractionConfirmationScreen extends ConsumerWidget {
   }
 
   Widget _buildThumbnail(BuildContext context, String url, bool highlighted) {
-    return Container(
-      width: 110,
-      height: 110,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
-        boxShadow:
-            highlighted
-                ? [
-                  BoxShadow(
-                    color: AppTheme.purpleAccent.withOpacity(0.35),
-                    blurRadius: 18,
-                    spreadRadius: 1,
+    // Déterminer le type de média depuis l'URL
+    final isPhoto =
+        url.toLowerCase().endsWith('.jpg') ||
+        url.toLowerCase().endsWith('.jpeg') ||
+        url.toLowerCase().endsWith('.png') ||
+        url.toLowerCase().endsWith('.gif');
+
+    final isVideo =
+        url.toLowerCase().endsWith('.mp4') ||
+        url.toLowerCase().endsWith('.mov') ||
+        url.toLowerCase().endsWith('.avi');
+
+    final isAudio =
+        url.toLowerCase().endsWith('.mp3') ||
+        url.toLowerCase().endsWith('.m4a') ||
+        url.toLowerCase().endsWith('.wav');
+
+    return GestureDetector(
+      onTap: () {
+        // Ouvrir le lecteur pour vidéo/audio
+        if (isVideo || isAudio) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => MediaPlayerScreen(
+                    filePath: url,
+                    mediaType: isVideo ? 'VIDEO' : 'AUDIO',
                   ),
-                ]
-                : [],
-        border: Border.all(color: AppTheme.borderColor.withOpacity(0.7)),
+            ),
+          );
+        }
+        // Pour les photos, on peut ajouter un zoom
+        else if (isPhoto) {
+          showDialog(
+            context: context,
+            builder:
+                (context) => Dialog(
+                  backgroundColor: Colors.transparent,
+                  child: InteractiveViewer(child: Image.file(File(url))),
+                ),
+          );
+        }
+      },
+      child: Container(
+        width: 110,
+        height: 110,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderColor.withOpacity(0.7)),
+          boxShadow:
+              highlighted
+                  ? [
+                    BoxShadow(
+                      color: AppTheme.purpleAccent.withOpacity(0.35),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                  : [],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: _buildMediaContent(url, isPhoto, isVideo, isAudio),
+        ),
       ),
     );
+  }
+
+  Widget _buildMediaContent(
+    String url,
+    bool isPhoto,
+    bool isVideo,
+    bool isAudio,
+  ) {
+    if (isPhoto) {
+      // Afficher l'image
+      return url.startsWith('http')
+          ? Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildErrorWidget();
+            },
+          )
+          : Image.file(
+            File(url),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildErrorWidget();
+            },
+          );
+    } else if (isVideo) {
+      // Afficher une icône vidéo
+      return Container(
+        color: Colors.black87,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.play_circle_fill, color: Colors.white70, size: 48),
+            const SizedBox(height: 4),
+            const Text(
+              'Vidéo',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        ),
+      );
+    } else if (isAudio) {
+      // Afficher une icône audio
+      return Container(
+        color: const Color(0xFF1a1a2e),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.audiotrack, color: Colors.cyan, size: 48),
+            const SizedBox(height: 4),
+            const Text(
+              'Audio',
+              style: TextStyle(color: Colors.cyan, fontSize: 10),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return _buildErrorWidget();
+    }
+  }
+
+  Widget _buildErrorWidget() {
+    return Container(
+      color: Colors.grey[800],
+      child: const Icon(Icons.broken_image, color: Colors.white54, size: 32),
+    );
+  }
+
+  /// Extraire le nom du fichier depuis le path
+  String _getFileName(String path) {
+    return path.split('/').last;
   }
 }

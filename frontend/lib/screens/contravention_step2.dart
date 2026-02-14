@@ -9,6 +9,7 @@ import '../models/resident_model.dart';
 import '../providers/contravention_provider.dart';
 import 'package:infractions_app/widgets/gradient_button.dart';
 import '../screens/infraction_confirmation_screen.dart';
+import '../screens/media_player_screen.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/language_switcher.dart';
 
@@ -16,7 +17,8 @@ class ContraventionStep2Screen extends ConsumerStatefulWidget {
   final String? motif;
   final ResidentModel? resident;
 
-  const ContraventionStep2Screen({Key? key, this.motif, this.resident}) : super(key: key);
+  const ContraventionStep2Screen({Key? key, this.motif, this.resident})
+    : super(key: key);
 
   @override
   ConsumerState<ContraventionStep2Screen> createState() =>
@@ -233,44 +235,93 @@ class _ContraventionStep2ScreenState
   }
 
   Widget _buildFilePreview(List<ContraventionMediaDetail> media) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.5, // Adjusted for better visual
-      ),
-      itemCount: media.length,
-      itemBuilder: (context, index) {
-        final item = media[index];
-        return Stack(
-          children: [
-            Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: Colors.grey[800],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: _getMediaWidget(item),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: GestureDetector(
-                onTap: () => _removeFile(item.id),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.black87,
-                    shape: BoxShape.circle,
+    return Consumer(
+      builder: (context, ref, child) {
+        final currentMedia = ref.watch(contraventionFormDataProvider).media;
+
+        if (currentMedia.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.5,
+          ),
+          itemCount: currentMedia.length,
+          itemBuilder: (context, index) {
+            final item = currentMedia[index];
+            return Stack(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    // Ouvrir le lecteur pour vidéo/audio
+                    if (item.mediaType == 'VIDEO' ||
+                        item.mediaType == 'AUDIO') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => MediaPlayerScreen(
+                                filePath: item.file.path,
+                                mediaType: item.mediaType,
+                              ),
+                        ),
+                      );
+                    }
+                    // Pour les photos, on peut ajouter un zoom
+                    else if (item.mediaType == 'PHOTO') {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (context) => Dialog(
+                              backgroundColor: Colors.transparent,
+                              child: InteractiveViewer(
+                                child: Image.file(item.file),
+                              ),
+                            ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: _getMediaWidget(item),
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 20),
                 ),
-              ),
-            ),
-          ],
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () {
+                      ref
+                          .read(contraventionFormDataProvider.notifier)
+                          .removeMedia(item.id);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.black87,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -282,24 +333,72 @@ class _ContraventionStep2ScreenState
         return Image.file(
           item.file,
           fit: BoxFit.cover,
-          errorBuilder:
-              (context, error, stackTrace) =>
-                  const Center(child: Icon(Icons.image_not_supported)),
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Erreur chargement image: $error');
+            return Container(
+              color: Colors.grey[800],
+              child: const Center(
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: Colors.white54,
+                  size: 32,
+                ),
+              ),
+            );
+          },
         );
+
       case 'VIDEO':
-        return const Center(
-          child: Icon(
-            Icons.play_circle_outline,
-            color: Colors.white70,
-            size: 48,
+        // Afficher une icône de vidéo avec le nom du fichier
+        return Container(
+          color: Colors.black87,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.play_circle_outline,
+                color: Colors.white70,
+                size: 48,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _getFileName(item.file.path),
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         );
+
       case 'AUDIO':
-        return const Center(
-          child: Icon(Icons.audiotrack, color: Colors.white70, size: 48),
+        // Afficher une icône audio avec le nom du fichier
+        return Container(
+          color: const Color(0xFF1a1a2e),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.audiotrack, color: Colors.cyan, size: 48),
+              const SizedBox(height: 8),
+              Text(
+                _getFileName(item.file.path),
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         );
+
       default:
-        return const Center(child: Icon(Icons.attachment));
+        return Container(
+          color: Colors.grey[800],
+          child: const Center(
+            child: Icon(Icons.attachment, color: Colors.white54, size: 32),
+          ),
+        );
     }
   }
 
@@ -366,7 +465,6 @@ class _ContraventionStep2ScreenState
     final locale = AppLocalizations.of(context)!;
     return Row(
       children: [
-        
         Expanded(
           child: OutlinedButton(
             onPressed: () => Navigator.pop(context),
@@ -391,10 +489,13 @@ class _ContraventionStep2ScreenState
               // Get locale again here for the callback
               final currentLocale = AppLocalizations.of(context);
               // Guard: re-check description at time of click
-              final isDescriptionValid = descriptionController.text.trim().isNotEmpty;
+              final isDescriptionValid =
+                  descriptionController.text.trim().isNotEmpty;
               if (!isDescriptionValid) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(currentLocale?.loading ?? 'Loading...')),
+                  SnackBar(
+                    content: Text(currentLocale?.loading ?? 'Loading...'),
+                  ),
                 );
                 return;
               }
@@ -402,7 +503,11 @@ class _ContraventionStep2ScreenState
               // Enforce motif is provided (passed from previous step)
               if (widget.motif == null || widget.motif!.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Le choix du motif est obligatoire pour continuer')),
+                  const SnackBar(
+                    content: Text(
+                      'Le choix du motif est obligatoire pour continuer',
+                    ),
+                  ),
                 );
                 return;
               }
@@ -414,18 +519,26 @@ class _ContraventionStep2ScreenState
               final mediaUrls = formState.media.map((m) => m.mediaUrl).toList();
               final desc = descriptionController.text.trim();
 
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => InfractionConfirmationScreen(
-                  motif: widget.motif!,
-                  resident: widget.resident,
-                  description: desc,
-                  mediaUrls: mediaUrls,
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder:
+                      (_) => InfractionConfirmationScreen(
+                        motif: widget.motif!,
+                        resident: widget.resident,
+                        description: desc,
+                        mediaUrls: mediaUrls,
+                      ),
                 ),
-              ));
+              );
             },
           ),
         ),
       ],
     );
+  }
+
+  /// Extraire le nom du fichier depuis le path
+  String _getFileName(String path) {
+    return path.split('/').last;
   }
 }

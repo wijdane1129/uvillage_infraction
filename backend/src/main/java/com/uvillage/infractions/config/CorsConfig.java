@@ -16,7 +16,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(
                     "http://localhost:*", 
                     "http://127.0.0.1:*",
-                    "http://192.168.11.157:*"
+                    "http://192.168.11.160:*"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Autoriser les méthodes HTTP
                 .allowedHeaders("*") // Autoriser tous les headers dans la requête
