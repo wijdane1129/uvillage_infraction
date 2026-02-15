@@ -17,7 +17,7 @@ class ApiConfig {
     if (kIsWeb) {
       return 'http://localhost:3000';
     } else {
-      return 'http://192.168.11.160:3000';
+      return 'http://192.168.8.167:3000';
     }
   }
 
@@ -32,7 +32,7 @@ class ApiConfig {
     if (kIsWeb) {
       return 'http://localhost:8080';
     } else {
-      return 'http://192.168.11.160:8080';
+      return 'http://192.168.8.167:8080';
     }
   }
 

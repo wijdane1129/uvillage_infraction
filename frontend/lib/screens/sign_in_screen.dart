@@ -8,8 +8,8 @@ import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import 'forgot_password_screen.dart';
-import 'sign_up_screen.dart';
-import 'sign_up_screen.dart';
+
+import 'package:infractions_app/screens/create_account_screen.dart';
 import 'responsable_home_screen.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/language_switcher.dart';

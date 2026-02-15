@@ -72,7 +72,9 @@ class ContraventionModel {
     String titre = 'N/A';
     if (json['typeContravention'] != null && json['typeContravention'] is Map) {
       final typeMap = json['typeContravention'] as Map<String, dynamic>;
-      titre = (typeMap['label'] as String?) ?? 'N/A';
+      // Use 'nom' field from backend (ContraventionTypeDTO returns 'nom' not 'label')
+      titre =
+          (typeMap['nom'] as String?) ?? (typeMap['label'] as String?) ?? 'N/A';
     }
 
     String auteurNom = 'N/A';
