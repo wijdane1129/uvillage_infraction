@@ -72,6 +72,7 @@ public class DashboardService {
         Long total = dashboardRepository.countInfraction();
         Long pending = dashboardRepository.countPendingInfractions();
         Long acceptedMonth = dashboardRepository.countAcceptedThisMonth();
+        Long rejectedMonth = dashboardRepository.countRejectedThisMonth();
 
         // Calculate total fines (need to fetch actual contraventions with recidives)
         List<Contravention> allContraventions = dashboardRepository.findAll();
@@ -93,6 +94,7 @@ public class DashboardService {
                 .totalInfractions(total == null ? 0 : total.intValue())
                 .pendingInfractions(pending == null ? 0 : pending.intValue())
                 .acceptedThisMonth(acceptedMonth == null ? 0 : acceptedMonth.intValue())
+                .rejectedThisMonth(rejectedMonth == null ? 0 : rejectedMonth.intValue())
                 .totalFines(totalFines)
                 .chartData(chartData)
                 .recentInfractions(recentDtos)

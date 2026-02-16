@@ -23,6 +23,9 @@ public interface DashboardRepository extends JpaRepository<Contravention, Long> 
     @Query(value = "SELECT COUNT(*) FROM contraventions WHERE statut = 'ACCEPTEE' AND MONTH(date_creation) = MONTH(CURDATE()) AND YEAR(date_creation) = YEAR(CURDATE())", nativeQuery = true)
     Long countAcceptedThisMonth();
 
+    @Query(value = "SELECT COUNT(*) FROM contraventions WHERE statut = 'CLASSEE_SANS_SUITE' AND MONTH(date_creation) = MONTH(CURDATE()) AND YEAR(date_creation) = YEAR(CURDATE())", nativeQuery = true)
+    Long countRejectedThisMonth();
+
     @Query("SELECT MONTH(c.dateCreation), COUNT(c) FROM Contravention c GROUP BY MONTH(c.dateCreation)")
     List<Object[]> countByMonth();
 

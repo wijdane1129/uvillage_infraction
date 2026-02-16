@@ -17,6 +17,7 @@ public class DashboardResponsableDto {
     private int totalInfractions;
     private int pendingInfractions;
     private int acceptedThisMonth;
+    private int rejectedThisMonth;
     private double totalFines;
 
     // Chart data (30 days evolution)

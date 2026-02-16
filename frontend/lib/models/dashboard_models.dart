@@ -54,6 +54,7 @@ class DashboardResponsable {
   final int totalInfractions;
   final int pendingInfractions;
   final int acceptedThisMonth;
+  final int rejectedThisMonth;
   final double totalFines;
   final List<ChartDataPoint> chartData;
   final List<RecentContravention> recentInfractions;
@@ -63,6 +64,7 @@ class DashboardResponsable {
     required this.totalInfractions,
     required this.pendingInfractions,
     required this.acceptedThisMonth,
+    required this.rejectedThisMonth,
     required this.totalFines,
     required this.chartData,
     required this.recentInfractions,
@@ -84,6 +86,7 @@ class DashboardResponsable {
         totalInfractions: (json['totalInfractions'] as num?)?.toInt() ?? 0,
         pendingInfractions: (json['pendingInfractions'] as num?)?.toInt() ?? 0,
         acceptedThisMonth: (json['acceptedThisMonth'] as num?)?.toInt() ?? 0,
+        rejectedThisMonth: (json['rejectedThisMonth'] as num?)?.toInt() ?? 0,
         totalFines: (json['totalFines'] as num?)?.toDouble() ?? 0.0,
         chartData:
             chartList
@@ -105,6 +108,7 @@ class DashboardResponsable {
         totalInfractions: 0,
         pendingInfractions: 0,
         acceptedThisMonth: 0,
+        rejectedThisMonth: 0,
         totalFines: 0.0,
         chartData: [],
         recentInfractions: [],

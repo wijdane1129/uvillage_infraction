@@ -93,22 +93,15 @@ class _DashboardResponsableScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header
-                        _buildHeader(context),
-                        const SizedBox(height: 24),
-
+                        const SizedBox(height: 40),
+                        Center(child: _buildHeader(context)),
+                        const SizedBox(height: 32),
                         // Stats Cards
                         _buildStatsCards(),
                         const SizedBox(height: 24),
-
                         // Chart
                         _buildChartSection(),
                         const SizedBox(height: 24),
-
-                        // Quick Actions
-                        _buildQuickActions(),
-                        const SizedBox(height: 24),
-
                         // Recent Infractions
                         _buildRecentInfractions(),
                       ],
@@ -121,24 +114,27 @@ class _DashboardResponsableScreenState
 
   Widget _buildHeader(BuildContext context) {
     final locale = AppLocalizations.of(context)!;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           locale.dashboard,
           style: const TextStyle(
             fontSize: 28,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             color: Colors.white,
+            letterSpacing: 0.5,
           ),
+          textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(10),
+          height: 3,
+          width: 60,
           decoration: BoxDecoration(
-            color: AppTheme.purpleAccent.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(50),
+            color: AppTheme.purpleAccent.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(2),
           ),
-          child: Icon(Icons.notifications_none, color: AppTheme.purpleAccent),
         ),
       ],
     );
@@ -173,10 +169,10 @@ class _DashboardResponsableScreenState
           const Color(0xFF4CAF50),
         ),
         _buildStatCard(
-          'Total amendes',
-          '€${dashboard!.totalFines.toStringAsFixed(0)}',
-          Icons.euro_symbol,
-          const Color(0xFFFF9800),
+          'Rejetées ce mois',
+          dashboard!.rejectedThisMonth.toString(),
+          Icons.cancel,
+          const Color(0xFFE53935),
         ),
       ],
     );
@@ -326,48 +322,6 @@ class _DashboardResponsableScreenState
     );
   }
 
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Actions rapides',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                'Nouvelle Infraction',
-                Icons.add,
-                AppTheme.purpleAccent,
-                () {
-                  // Navigate to create infraction
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionButton(
-                'Gérer Agents',
-                Icons.group,
-                AppTheme.borderColor,
-                () {
-                  // Navigate to agents management
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildActionButton(
     String label,
     IconData icon,
@@ -412,19 +366,6 @@ class _DashboardResponsableScreenState
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                // Navigate to full list
-              },
-              child: Text(
-                'Voir tout',
-                style: TextStyle(
-                  color: AppTheme.cyanAccent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
               ),
             ),
           ],
