@@ -1,14 +1,16 @@
-// Fichier : lib/services/contravention_service.dart
-
+// lib/services/contravention_service_fixed.dart
+import 'dart:io';
 import 'package:dio/dio.dart';
-import 'api_client.dart'; // Pour obtenir l'instance Dio
+import 'api_client.dart';
 import 'offline_storage_service.dart';
 import 'connectivity_service.dart';
+import 'MediaUploadService.dart';
 
 class ContraventionService {
   final Dio _dio = ApiClient.dio;
   final OfflineStorageService _offlineStorage;
   final ConnectivityService _connectivity;
+  final MediaUploadService _mediaUploadService = MediaUploadService();
   
   ContraventionService({
     required OfflineStorageService offlineStorage,
@@ -16,12 +18,10 @@ class ContraventionService {
   })  : _offlineStorage = offlineStorage,
         _connectivity = connectivity;
   
-  // 🎯 CORRECTION : Définir la méthode fetchStats(agentRowid)
   Future<Map<String, dynamic>> fetchStats(int agentRowid) async {
     try {
       print('📡 [STATS] Requête des statistiques pour agent ID: $agentRowid');
       
-      // Backend mapping: @RequestMapping("/api/v1/contraventions") + GET "/stats/{agentRowid}"
       final response = await _dio.get('/contraventions/stats/$agentRowid');
       
       if (response.statusCode == 200 && response.data is Map) {
@@ -67,13 +67,53 @@ class ContraventionService {
         };
       }
 
-      // Build payload and remove nulls
+      // 🎯 STEP 1: Upload media files first
+      List<String> uploadedMediaUrls = [];
+      
+      if (mediaUrls != null && mediaUrls.isNotEmpty) {
+        print('📤 [CREATE] Uploading ${mediaUrls.length} media files...');
+        
+        for (String mediaPath in mediaUrls) {
+          // Check if it's a local file path
+          if (mediaPath.startsWith('/') || mediaPath.contains('\\')) {
+            final file = File(mediaPath);
+            
+            if (await file.exists()) {
+              try {
+                // Determine media type from file extension
+                String mediaType = _getMediaTypeFromPath(mediaPath);
+                
+                // Upload the file
+                final mediaUrl = await _mediaUploadService.uploadMedia(
+                  file: file,
+                  mediaType: mediaType,
+                );
+                
+                uploadedMediaUrls.add(mediaUrl);
+                print('✅ [CREATE] Media uploaded: $mediaUrl');
+              } catch (e) {
+                print('⚠️ [CREATE] Error uploading media: $e');
+                // Continue with other files
+              }
+            } else {
+              print('⚠️ [CREATE] Media file not found: $mediaPath');
+            }
+          } else {
+            // Already an uploaded URL
+            uploadedMediaUrls.add(mediaPath);
+          }
+        }
+        
+        print('✅ [CREATE] Uploaded ${uploadedMediaUrls.length} media files');
+      }
+
+      // 🎯 STEP 2: Create contravention with uploaded media URLs
       final Map<String, dynamic> payload = {
         'description': description,
         'typeLabel': typeLabel,
         'userAuthorId': userAuthorId,
         if (tiersId != null) 'tiersId': tiersId,
-        if (mediaUrls != null) 'mediaUrls': mediaUrls,
+        if (uploadedMediaUrls.isNotEmpty) 'mediaUrls': uploadedMediaUrls,
       };
 
       print('📤 [CREATE] Payload envoyé: $payload');
@@ -82,6 +122,7 @@ class ContraventionService {
       final response = await _dio.post('/contraventions', data: payload);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
+        print('✅ [CREATE] Contravention created successfully');
         return {
           ...response.data as Map<String, dynamic>,
           'offline': false,
@@ -122,5 +163,34 @@ class ContraventionService {
   Future<List<String>> fetchContraventionTypeLabels() async {
     final response = await _dio.get('/contraventions/types');
     return List<String>.from(response.data);
+  }
+
+  /// Determine media type from file path
+  String _getMediaTypeFromPath(String path) {
+    final extension = path.toLowerCase().split('.').last;
+    
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'webp':
+        return 'PHOTO';
+      
+      case 'mp4':
+      case 'mov':
+      case 'avi':
+      case 'mkv':
+        return 'VIDEO';
+      
+      case 'mp3':
+      case 'm4a':
+      case 'wav':
+      case 'aac':
+        return 'AUDIO';
+      
+      default:
+        return 'DOCUMENT';
+    }
   }
 }

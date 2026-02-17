@@ -8,8 +8,8 @@ class FileUploadService {
 
   late final String baseUrl =
       kIsWeb
-          ? 'http://localhost:8080/api/contravention/media'
-          : 'http://192.168.8.167:8080/api/contravention/media';
+          ? 'http://localhost:8080/api/v1/media'
+          : 'http://192.168.8.167:8080/api/v1/media';
 
   FileUploadService({required this.dio});
 
@@ -29,7 +29,7 @@ class FileUploadService {
       });
 
       final response = await dio.post(
-        '$baseUrl/upload/$rowid',
+        '$baseUrl/upload',
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
         onSendProgress: onSendProgress,

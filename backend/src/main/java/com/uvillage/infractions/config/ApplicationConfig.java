@@ -13,6 +13,9 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import java.nio.file.Paths;
 
 import com.uvillage.infractions.repository.UserRepository;
 import com.uvillage.infractions.security.CustomUserDetailsService;
@@ -29,6 +32,9 @@ public class ApplicationConfig {
     private final UserRepository userRepository;
     @org.springframework.beans.factory.annotation.Value("${app.responsible.pattern:}")
     private String responsiblePattern;
+    
+    @org.springframework.beans.factory.annotation.Value("${uploads.dir:${user.home}/infractions/uploads}")
+    private String uploadsDir;
 
     /**
      * Explicit constructor to satisfy IDEs / language servers that do not
@@ -56,6 +62,20 @@ public class ApplicationConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public WebMvcConfigurer webMvcConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addResourceHandlers(ResourceHandlerRegistry registry) {
+                // Serve static files from uploads directory
+                String fileSystemPath = Paths.get(uploadsDir).toUri().toString();
+                registry.addResourceHandler("/uploads/**")
+                        .addResourceLocations(fileSystemPath)
+                        .setCachePeriod(3600);
+            }
+        };
     }
 
     @Bean

@@ -1,31 +1,32 @@
 package com.uvillage.infractions.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name="contraventions")
+@Table(name = "contraventions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Contravention {
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long rowid;
 
-    @Column(nullable=false, unique=true)
+    @Column(nullable = false, unique = true)
     private String ref;
 
-    @Column(name="date_creation", nullable=false)
+    @Column(name = "date_creation", nullable = false)
     private LocalDate dateCreation;
 
-    @Column(columnDefinition="TEXT")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable=false)
+    @Column(nullable = false)
     private Status statut = Status.SOUS_VERIFICATION;
 
     public enum Status {
@@ -35,32 +36,32 @@ public class Contravention {
     }
 
     @ManyToOne
-    @JoinColumn(name="fk_user_author", nullable=false)
+    @JoinColumn(name = "fk_user_author", nullable = false)
     private User userAuthor;
 
     @ManyToOne
-    @JoinColumn(name="fk_tiers")
+    @JoinColumn(name = "fk_tiers")
     private Resident tiers;
 
     @ManyToOne
-    @JoinColumn(name="fk_facture")
+    @JoinColumn(name = "fk_facture")
     private Facture facture;
 
     @ManyToOne
-    @JoinColumn(name="fk_type_contravention", nullable=false)
+    @JoinColumn(name = "fk_type_contravention", nullable = false)
     private ContraventionType typeContravention;
 
     @ManyToOne
-    @JoinColumn(name="fk_chambre")
+    @JoinColumn(name = "fk_chambre")
     private Chambre chambre;
 
-    @Column(name="numero_chambre")
+    @Column(name = "numero_chambre")
     private String numeroChambre;
 
-    @Column(name="batiment")
+    @Column(name = "batiment")
     private String batiment;
 
-    @OneToMany(mappedBy="contravention", cascade=CascadeType.ALL)
+    @OneToMany(mappedBy = "contravention", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ContraventionMedia> media;
 
     // Explicit accessors to avoid reliance on Lombok during IDE/processor issues

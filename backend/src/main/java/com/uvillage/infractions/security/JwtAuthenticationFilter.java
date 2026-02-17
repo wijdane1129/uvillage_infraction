@@ -87,10 +87,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 boolean tokenOk = false;
                 try {
                     tokenOk = jwtUtils.isTokenValid(jwt, userDetails);
+                    logger.debug("[JWT FILTER] isTokenValid result for {}: {}", username, tokenOk);
                 } catch (Exception ex) {
-                    logger.error("[JWT FILTER] isTokenValid threw: {}", ex.getMessage(), ex);
+                    logger.error("[JWT FILTER] isTokenValid threw exception: {}", ex.getMessage(), ex);
+                    tokenOk = false;
                 }
-                logger.debug("[JWT FILTER] isTokenValid result for {}: {}", username, tokenOk);
 
                 if (tokenOk) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -101,12 +102,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    logger.debug("[JWT FILTER] Authentication set for user: {} on {}", username, request.getRequestURI());
+                    logger.debug("[JWT FILTER] ✅ Authentication SUCCESSFULLY SET for user: {} on {}", username, request.getRequestURI());
                 } else {
-                    logger.warn("[JWT FILTER] JWT validation failed for: {} on {}", username, request.getRequestURI());
+                    logger.error("[JWT FILTER] ❌ JWT VALIDATION FAILED for user: {} on path: {}", username, request.getRequestURI());
+                    logger.error("[JWT FILTER] Token will be rejected by Spring Security (will return 401)");
                 }
             } catch (Exception e) {
-                logger.error("[JWT FILTER] Error during authentication for request {}", request.getRequestURI(), e);
+                logger.error("[JWT FILTER] ❌ Error during authentication for request {} - Exception: {}", request.getRequestURI(), e.getMessage());
+                logger.error("[JWT FILTER] Stack trace:", e);
+            }
+        } else {
+            if (username == null) {
+                logger.warn("[JWT FILTER] ⚠️ Username is NULL after token extraction - cannot authenticate");
+            }
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                logger.debug("[JWT FILTER] Authentication already exists in context");
             }
         }
 

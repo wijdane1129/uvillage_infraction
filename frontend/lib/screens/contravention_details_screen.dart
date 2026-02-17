@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:infractions_app/screens/classer_sans_suite_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../config/app_theme.dart';
 import '../models/contravention_models.dart';
 import '../services/resident_mock_service.dart';
 import '../services/api_service.dart';
+import '../services/api_client.dart';
 import 'media_viewer.dart';
 import 'accepter_contravention_screen.dart';
 import 'assign_contravention_screen.dart';
+import 'classer_sans_suite_screen.dart';
 
 class ContraventionDetailsScreen extends StatefulWidget {
   final Contravention contravention;
@@ -28,16 +30,26 @@ class _ContraventionDetailsScreenState
   void initState() {
     super.initState();
     _loadResidentData();
+    _debugPrintMediaInfo();
   }
 
-  /// 🎯 MÉTHODE CLÉE - Charge les données du résident depuis le CSV
+  /// Debug method to print media information
+  void _debugPrintMediaInfo() {
+    print('🎯 [DETAILS] Contravention ref: ${widget.contravention.ref}');
+    print('🎯 [DETAILS] Media count: ${widget.contravention.media.length}');
+    for (var media in widget.contravention.media) {
+      print('🎯 [DETAILS] Media URL: ${media.mediaUrl}');
+      print('🎯 [DETAILS] Media Type: ${media.mediaType}');
+    }
+  }
+
+  /// Load resident data from CSV
   Future<void> _loadResidentData() async {
     try {
       print(
         '📋 Chargement résident pour contravention ${widget.contravention.ref}',
       );
 
-      // Extraire chambre et bâtiment depuis la contravention
       final extracted = ResidentMockService.extractRoomAndBuilding(
         widget.contravention.residentAdresse,
       );
@@ -53,22 +65,40 @@ class _ContraventionDetailsScreenState
           batiment,
         );
 
-        setState(() {
-          _mockResident = resident;
-          _isLoadingResident = false;
-        });
+        if (mounted) {
+          setState(() {
+            _mockResident = resident;
+            _isLoadingResident = false;
+          });
+        }
       } else {
         print('⚠️ Impossible d\'extraire chambre/bâtiment de l\'adresse');
+        if (mounted) {
+          setState(() {
+            _isLoadingResident = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ Erreur chargement résident: $e');
+      if (mounted) {
         setState(() {
           _isLoadingResident = false;
         });
       }
-    } catch (e) {
-      print('❌ Erreur chargement résident: $e');
-      setState(() {
-        _isLoadingResident = false;
-      });
     }
+  }
+
+  /// Get full media URL from backend
+  String _getMediaUrl(String mediaUrl) {
+    // If it's already a full URL, return it
+    if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+      return mediaUrl;
+    }
+    
+    // Otherwise, construct the full URL using the base URL
+    final baseUrl = ApiClient.dio.options.baseUrl.replaceAll('/api/v1', '');
+    return '$baseUrl/$mediaUrl';
   }
 
   @override
@@ -124,7 +154,7 @@ class _ContraventionDetailsScreenState
             const SizedBox(height: 16),
             _mediaSection(context),
             const SizedBox(height: 24),
-            // Bouton Assigner à un résident
+            // Action buttons
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -296,7 +326,6 @@ class _ContraventionDetailsScreenState
             ],
           ),
           const SizedBox(height: 12),
-          // 👤 AGENT QUI A DÉCLARÉ
           Row(
             children: [
               Icon(Icons.person, color: Colors.blueAccent, size: 20),
@@ -324,7 +353,6 @@ class _ContraventionDetailsScreenState
   }
 
   Widget _personCard(BuildContext context) {
-    // 🎯 UTILISER LES DONNÉES CHARGÉES DU CSV
     String residentName;
     String residentAdresse;
 
@@ -332,11 +360,9 @@ class _ContraventionDetailsScreenState
       residentName = 'Chargement...';
       residentAdresse = '';
     } else if (_mockResident != null) {
-      // ✅ Données trouvées dans le CSV
       residentName = _mockResident!.fullName;
       residentAdresse = _mockResident!.adresse;
     } else {
-      // ⚠️ Pas trouvé dans le CSV - utiliser les données de base
       residentName = widget.contravention.residentName ?? 'Résident inconnu';
       residentAdresse =
           widget.contravention.residentAdresse ?? 'Adresse inconnue';
@@ -402,7 +428,7 @@ class _ContraventionDetailsScreenState
               ),
             ),
             onPressed: () {
-              // TODO: Naviguer vers l'historique du résident
+              // TODO: Navigate to resident history
             },
             child: const Text('Historique'),
           ),
@@ -412,6 +438,25 @@ class _ContraventionDetailsScreenState
   }
 
   Widget _mediaSection(BuildContext context) {
+    if (widget.contravention.media.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.darkBgAlt,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            'Aucun média attaché',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -444,14 +489,16 @@ class _ContraventionDetailsScreenState
           itemCount: widget.contravention.media.length,
           itemBuilder: (context, index) {
             final media = widget.contravention.media[index];
-            final url = media.mediaUrl;
+            final fullUrl = _getMediaUrl(media.mediaUrl);
             final isVideo = media.mediaType.toLowerCase().contains('video');
+
+            print('🖼️ [MEDIA] Displaying media: $fullUrl (type: ${media.mediaType})');
 
             return GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => MediaViewer(url: url, isVideo: isVideo),
+                    builder: (_) => MediaViewer(url: fullUrl, isVideo: isVideo),
                   ),
                 );
               },
@@ -461,11 +508,33 @@ class _ContraventionDetailsScreenState
                   fit: StackFit.expand,
                   children: [
                     if (!isVideo)
-                      Image.network(
-                        url,
+                      CachedNetworkImage(
+                        imageUrl: fullUrl,
                         fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) => Container(color: Colors.grey),
+                        placeholder: (context, url) => Container(
+                          color: Colors.grey[800],
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) {
+                          print('❌ [MEDIA] Error loading image: $error');
+                          return Container(
+                            color: Colors.grey[800],
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image, color: Colors.white54, size: 32),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Erreur de chargement',
+                                  style: TextStyle(color: Colors.white54, fontSize: 10),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       )
                     else
                       Container(

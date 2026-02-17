@@ -42,19 +42,17 @@ public class CustomUserDetailsService implements UserDetailsService {
                 "Utilisateur non trouvé avec l'email: " + email
             ));
 
-        // If the email matches the responsable pattern, persist the role
-        if (responsiblePattern != null) {
+        // Determine role: check if email matches responsable pattern
+        // but don't save during authentication - role should be set at registration time
+        String role = "AGENT";
+        if (user.getRole() != null) {
+            role = user.getRole().name();
+        } else if (responsiblePattern != null) {
             String userMail = user.getEmail() != null ? user.getEmail().trim().toLowerCase(Locale.ROOT) : "";
-            boolean isResp = responsiblePattern.matcher(userMail).matches();
-
-            if (isResp && user.getRole() != User.Role.RESPONSABLE) {
-                user.setRole(User.Role.RESPONSABLE);
-                userRepository.save(user);
+            if (responsiblePattern.matcher(userMail).matches()) {
+                role = "RESPONSABLE";
             }
         }
-
-        // Mappe le rôle de l'utilisateur vers Spring Security
-        String role = user.getRole() != null ? user.getRole().name() : "AGENT";
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail() != null ? user.getEmail() : user.getUsername())

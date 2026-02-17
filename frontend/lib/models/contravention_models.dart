@@ -111,17 +111,57 @@ class Contravention {
   }
 
   factory Contravention.fromJson(Map<String, dynamic> json) {
+    // Handle userAuthor: can be a String (from dashboard) or a Map (from API)
+    String userAuthorStr = '';
+    final rawAuthor = json['userAuthor'];
+    if (rawAuthor is String) {
+      userAuthorStr = rawAuthor;
+    } else if (rawAuthor is Map<String, dynamic>) {
+      final prenom = (rawAuthor['prenom'] as String?) ?? '';
+      final nom = (rawAuthor['nom'] as String?) ?? '';
+      userAuthorStr = '$prenom $nom'.trim();
+    }
+
+    // Handle tiers: can be a String (from dashboard) or a Map (from API)
+    String tiersStr = '';
+    String? residentAdresse = json['residentAdresse'] as String?;
+    final rawTiers = json['tiers'];
+    if (rawTiers is String) {
+      tiersStr = rawTiers;
+    } else if (rawTiers is Map<String, dynamic>) {
+      final prenom = (rawTiers['prenom'] as String?) ?? '';
+      final nom = (rawTiers['nom'] as String?) ?? '';
+      tiersStr = '$prenom $nom'.trim();
+      // Try to get adresse from tiers if not already set
+      if (residentAdresse == null || residentAdresse.isEmpty) {
+        residentAdresse = rawTiers['adresse'] as String?;
+      }
+    }
+
+    // Handle motif: can be a String (from dashboard) or extracted from typeContravention (from API)
+    String motifStr = json['motif'] as String? ?? '';
+    if (motifStr.isEmpty && json['typeContravention'] != null && json['typeContravention'] is Map) {
+      final typeMap = json['typeContravention'] as Map<String, dynamic>;
+      motifStr = (typeMap['label'] as String?) ?? (typeMap['nom'] as String?) ?? '';
+    }
+
+    // Handle status: backend sends 'statut', dashboard sends 'status'
+    String statusStr = (json['status'] as String?) ?? (json['statut'] as String?) ?? '';
+
+    // Handle dateTime: backend sends 'dateHeure', dashboard sends 'dateTime'
+    String dateTimeStr = (json['dateTime'] as String?) ?? (json['dateHeure'] as String?) ?? '';
+
     return Contravention(
       rowid: json['rowid'] as int?,
       description: json['description'] as String? ?? '',
-      status: json['status'] as String? ?? '',
-      dateTime: json['dateTime'] as String? ?? '',
+      status: statusStr,
+      dateTime: dateTimeStr,
       ref: json['ref'] as String? ?? '',
-      userAuthor: json['userAuthor'] as String? ?? '',
-      tiers: json['tiers'] as String? ?? '',
-      motif: json['motif'] as String? ?? '',
-      residentAdresse: json['residentAdresse'] as String?,
-      residentName: json['residentName'] as String?, // Added to JSON parsing
+      userAuthor: userAuthorStr,
+      tiers: tiersStr,
+      motif: motifStr,
+      residentAdresse: residentAdresse,
+      residentName: json['residentName'] as String?,
       media: (json['media'] as List<dynamic>? ?? [])
           .map(
             (e) => ContraventionMediaModels.fromJson(

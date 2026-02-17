@@ -81,8 +81,10 @@ public class DashboardService {
         // Chart data for last 30 days
         List<DashboardResponsableDto.ChartDataPoint> chartData = getChartDataLast30Days();
 
-        // Recent infractions
-        List<Contravention> recent = dashboardRepository.findRecentInfractions();
+        // Recent infractions (limit to 3)
+        List<Contravention> recent = dashboardRepository.findRecentInfractions().stream()
+                .limit(3)
+                .collect(Collectors.toList());
         List<RecentContraventionDto> recentDtos = recent.stream()
                 .map(this::convertToRecentDto)
                 .collect(Collectors.toList());

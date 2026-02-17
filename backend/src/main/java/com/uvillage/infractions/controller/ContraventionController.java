@@ -34,8 +34,7 @@ public class ContraventionController {
             UserRepository userRepository,
             ContraventionTypeRepository typeRepo,
             ResidentRepository residentRepository,
-            ContraventionRepository contraventionRepository
-    ) {
+            ContraventionRepository contraventionRepository) {
         this.contraventionService = contraventionService;
         this.userRepository = userRepository;
         this.typeRepo = typeRepo;
@@ -60,11 +59,21 @@ public class ContraventionController {
     // ---------- Create ----------
     @PostMapping
     public ResponseEntity<ContraventionDTO> createContravention(@RequestBody CreateContraventionRequest req) {
+        logger.info("📨 [CONTROLLER] POST /contraventions - creating contravention");
+        logger.info("📨 [CONTROLLER] Description: {}", req.getDescription());
+        logger.info("📨 [CONTROLLER] Type: {}", req.getTypeLabel());
+        logger.info("📨 [CONTROLLER] Media URLs count: {}", req.getMediaUrls() != null ? req.getMediaUrls().size() : 0);
+        if (req.getMediaUrls() != null && !req.getMediaUrls().isEmpty()) {
+            logger.info("📨 [CONTROLLER] Media URLs: {}", req.getMediaUrls());
+        }
+        
         ContraventionDTO created = contraventionService.createContravention(
                 req, this.userRepository, this.typeRepo,
-                this.residentRepository, this.contraventionRepository
-        );
+                this.residentRepository, this.contraventionRepository);
 
+        logger.info("✅ [CONTROLLER] Contravention created: {} with {} media", 
+            created.getRef(), created.getMedia() != null ? created.getMedia().size() : 0);
+        
         URI location = URI.create("/api/v1/contraventions/ref/" + (created != null ? created.getRef() : ""));
         return ResponseEntity.created(location).body(created);
     }
@@ -74,7 +83,8 @@ public class ContraventionController {
     public ResponseEntity<?> getByRef(@PathVariable String ref) {
         try {
             ContraventionDTO dto = contraventionService.getByRef(ref);
-            if (dto == null) return ResponseEntity.notFound().build();
+            if (dto == null)
+                return ResponseEntity.notFound().build();
             return ResponseEntity.ok(dto);
         } catch (Exception ex) {
             logger.error("Error fetching contravention {}", ref, ex);
@@ -87,10 +97,11 @@ public class ContraventionController {
     @PreAuthorize("hasRole('RESPONSABLE')")
     public ResponseEntity<?> confirmContravention(
             @PathVariable String ref,
-            @RequestParam(required = false) String numeroChambre,
-            @RequestParam(required = false) String batiment) {
+            @RequestBody(required = false) Map<String, String> body) {
         try {
-            logger.info("Confirming contravention with ref: {}", ref);
+            String numeroChambre = (body != null) ? body.get("numeroChambre") : null;
+            String batiment = (body != null) ? body.get("batiment") : null;
+            logger.info("Confirming contravention with ref: {}, chambre: {}, bat: {}", ref, numeroChambre, batiment);
             ContraventionDTO dto = contraventionService.confirmContravention(ref, numeroChambre, batiment);
             logger.info("Contravention {} confirmed successfully", ref);
 
@@ -105,14 +116,13 @@ public class ContraventionController {
             logger.error("Contravention not found: {}", ref, ex);
             return ResponseEntity.status(404).body(Map.of(
                     "success", false,
-                    "message", "Contravention non trouvée: " + ex.getMessage()
-            ));
+                    "message", "Contravention non trouvée: " + ex.getMessage()));
         } catch (Exception ex) {
             logger.error("Error confirming contravention {}", ref, ex);
             return ResponseEntity.status(500).body(Map.of(
                     "success", false,
-                    "message", "Erreur lors de la confirmation: " + ex.getClass().getSimpleName() + " - " + ex.getMessage()
-            ));
+                    "message",
+                    "Erreur lors de la confirmation: " + ex.getClass().getSimpleName() + " - " + ex.getMessage()));
         }
     }
 
@@ -137,8 +147,7 @@ public class ContraventionController {
         return ResponseEntity.ok(Map.of(
                 "authenticated", true,
                 "principal", principal.getName(),
-                "authorities", authorities
-        ));
+                "authorities", authorities));
     }
 
     // ---------- By resident ----------

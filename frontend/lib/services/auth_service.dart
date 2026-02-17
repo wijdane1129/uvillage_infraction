@@ -63,7 +63,7 @@ class AuthService {
       // Web (Edge browser): use localhost
       return 'http://localhost:8080';
     } else {
-      // Mobile (Android phone): use network IP
+      // Mobile (Android phone): use network IP (172.20.220.78 is the Wi-Fi interface)
       return 'http://192.168.8.167:8080';
     }
   }

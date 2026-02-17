@@ -3,10 +3,13 @@ import '../config/app_theme.dart';
 import '../models/dashboard_models.dart';
 import '../models/contravention_models.dart';
 import '../services/api_service.dart';
+import '../services/api_client.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../gen_l10n/app_localizations.dart';
 import 'contravention_details_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/api_config.dart';
 
 class DashboardResponsableScreen extends StatefulWidget {
   const DashboardResponsableScreen({Key? key}) : super(key: key);
@@ -456,48 +459,218 @@ class _DashboardResponsableScreenState
                   ),
                 ],
               ),
-              ElevatedButton(
-                onPressed: () {
-                  // Convert RecentContravention to Contravention
-                  final contravention = Contravention(
-                    rowid: infraction.rowid,
-                    description: infraction.description,
-                    media: [],
-                    status: infraction.statut,
-                    dateTime: infraction.dateCreation,
-                    ref: infraction.ref,
-                    userAuthor: infraction.agentName,
-                    tiers: infraction.residentName,
-                    motif: infraction.motif,
-                    residentAdresse: infraction.residentAdresse,
-                    residentName: infraction.residentName,
-                  );
+              if (infraction.statut == 'SOUS_VERIFICATION')
+                ElevatedButton(
+                  onPressed: () async {
+                    // Show loading indicator
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => const Center(
+                        child: CircularProgressIndicator(color: AppTheme.purpleAccent),
+                      ),
+                    );
 
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ContraventionDetailsScreen(
+                    try {
+                      // Fetch full contravention with media from backend API
+                      final response = await ApiClient.dio.get('/contraventions/ref/${infraction.ref}');
+                      Navigator.of(context).pop(); // dismiss loading
+
+                      if (response.statusCode == 200) {
+                        final apiData = response.data as Map<String, dynamic>;
+                        
+                        // Extract media from API response
+                        final mediaList = (apiData['media'] as List<dynamic>? ?? [])
+                            .map((e) => ContraventionMediaModels.fromJson(e as Map<String, dynamic>))
+                            .toList();
+
+                        // Build contravention using dashboard names (from CSV mock) + API media
+                        final contravention = Contravention(
+                          rowid: infraction.rowid,
+                          description: infraction.description,
+                          media: mediaList,
+                          status: infraction.statut,
+                          dateTime: infraction.dateCreation,
+                          ref: infraction.ref,
+                          userAuthor: infraction.agentName,
+                          tiers: infraction.residentName,
+                          motif: infraction.motif,
+                          residentAdresse: infraction.residentAdresse,
+                          residentName: infraction.residentName,
+                        );
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ContraventionDetailsScreen(
+                              contravention: contravention,
+                            ),
+                          ),
+                        );
+                      } else {
+                        throw Exception('Failed to load contravention details');
+                      }
+                    } catch (e) {
+                      Navigator.of(context).pop(); // dismiss loading
+                      print('⚠️ Error fetching full contravention, falling back: $e');
+
+                      // Fallback: navigate with available data (no media)
+                      final contravention = Contravention(
+                        rowid: infraction.rowid,
+                        description: infraction.description,
+                        media: [],
+                        status: infraction.statut,
+                        dateTime: infraction.dateCreation,
+                        ref: infraction.ref,
+                        userAuthor: infraction.agentName,
+                        tiers: infraction.residentName,
+                        motif: infraction.motif,
+                        residentAdresse: infraction.residentAdresse,
+                        residentName: infraction.residentName,
+                      );
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ContraventionDetailsScreen(
                             contravention: contravention,
                           ),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.purpleAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purpleAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                  child: const Text(
+                    'Traiter',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
+                )
+              else if (infraction.statut == 'ACCEPTEE')
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // View details button
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => const Center(
+                            child: CircularProgressIndicator(color: Colors.green),
+                          ),
+                        );
+                        try {
+                          final response = await ApiClient.dio.get('/contraventions/ref/${infraction.ref}');
+                          Navigator.of(context).pop();
+                          if (response.statusCode == 200) {
+                            final apiData = response.data as Map<String, dynamic>;
+                            final mediaList = (apiData['media'] as List<dynamic>? ?? [])
+                                .map((e) => ContraventionMediaModels.fromJson(e as Map<String, dynamic>))
+                                .toList();
+                            final contravention = Contravention(
+                              rowid: infraction.rowid,
+                              description: infraction.description,
+                              media: mediaList,
+                              status: infraction.statut,
+                              dateTime: infraction.dateCreation,
+                              ref: infraction.ref,
+                              userAuthor: infraction.agentName,
+                              tiers: infraction.residentName,
+                              motif: infraction.motif,
+                              residentAdresse: infraction.residentAdresse,
+                              residentName: infraction.residentName,
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ContraventionDetailsScreen(
+                                  contravention: contravention,
+                                ),
+                              ),
+                            );
+                          } else {
+                            throw Exception('Failed to load contravention');
+                          }
+                        } catch (e) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      ),
+                      icon: const Icon(Icons.visibility, size: 14),
+                      label: const Text('Détails', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 6),
+                    // Download facture button
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => const Center(
+                            child: CircularProgressIndicator(color: Colors.orange),
+                          ),
+                        );
+                        try {
+                          final response = await ApiClient.dio.get('/contraventions/ref/${infraction.ref}');
+                          Navigator.of(context).pop();
+                          if (response.statusCode == 200) {
+                            final apiData = response.data as Map<String, dynamic>;
+                            final pdfUrl = apiData['facturePdfUrl'] as String?;
+                            if (pdfUrl != null && pdfUrl.isNotEmpty) {
+                              // Build full URL for the PDF
+                              final baseUrl = ApiConfig.BACKEND_API_URL;
+                              final fullUrl = '$baseUrl/$pdfUrl';
+                              final uri = Uri.parse(fullUrl);
+                              try {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } catch (_) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Impossible d\'ouvrir le PDF'), backgroundColor: Colors.red),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Aucune facture disponible'), backgroundColor: Colors.orange),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      ),
+                      icon: const Icon(Icons.download, size: 14),
+                      label: const Text('Facture', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
                 ),
-                child: const Text(
-                  'Traiter',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ),
             ],
           ),
         ],

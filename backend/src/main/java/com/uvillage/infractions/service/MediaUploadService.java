@@ -60,7 +60,8 @@ public class MediaUploadService {
 
     public ContraventionMedia updateMedia(Long id, String mediaUrl, String mediaType) {
         var existing = mediaUploadRepository.findById(id).orElse(null);
-        if (existing == null) return null;
+        if (existing == null)
+            return null;
         existing.setMediaUrl(mediaUrl);
         existing.setMediaType(ContraventionMedia.MediaType.valueOf(mediaType));
         return mediaUploadRepository.save(existing);
