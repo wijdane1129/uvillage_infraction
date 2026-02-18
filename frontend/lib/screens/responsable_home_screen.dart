@@ -4,6 +4,7 @@ import '../gen_l10n/app_localizations.dart';
 import 'dashboard_responsable_screen.dart';
 import 'residents_screen.dart';
 import 'configuration_motifs_screen.dart';
+import 'User_profile.dart';
 
 class ResponsableHomeScreen extends StatefulWidget {
   const ResponsableHomeScreen({Key? key}) : super(key: key);
@@ -19,6 +20,7 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
     DashboardResponsableScreen(),
     ResidentsScreen(),
     ConfigurationMotifsScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -33,6 +35,7 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
             _selectedIndex = index;
           });
         },
+        type: BottomNavigationBarType.fixed,
         backgroundColor: const Color(0xFF1a1a2e),
         selectedItemColor: const Color(0xFF00d4ff),
         unselectedItemColor: Colors.grey,
@@ -48,6 +51,10 @@ class _ResponsableHomeScreenState extends State<ResponsableHomeScreen> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.settings),
             label: locale.configurationMotifs,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: locale.profile,
           ),
         ],
       ),

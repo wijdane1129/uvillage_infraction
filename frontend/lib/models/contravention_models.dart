@@ -119,9 +119,14 @@ class Contravention {
     if (rawAuthor is String) {
       userAuthorStr = rawAuthor;
     } else if (rawAuthor is Map<String, dynamic>) {
-      final prenom = (rawAuthor['prenom'] as String?) ?? '';
-      final nom = (rawAuthor['nom'] as String?) ?? '';
-      userAuthorStr = '$prenom $nom'.trim();
+      // User entity has fullName (single field), fallback to username
+      final fullName = (rawAuthor['fullName'] as String?) ?? '';
+      if (fullName.isNotEmpty) {
+        userAuthorStr = fullName;
+      } else {
+        final username = (rawAuthor['username'] as String?) ?? '';
+        userAuthorStr = username;
+      }
     }
 
     // Handle tiers: can be a String (from dashboard) or a Map (from API)

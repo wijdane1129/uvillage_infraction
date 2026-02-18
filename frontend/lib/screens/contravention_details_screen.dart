@@ -7,7 +7,6 @@ import '../services/api_service.dart';
 import '../services/api_client.dart';
 import 'media_viewer.dart';
 import 'accepter_contravention_screen.dart';
-import 'assign_contravention_screen.dart';
 import 'classer_sans_suite_screen.dart';
 
 class ContraventionDetailsScreen extends StatefulWidget {
@@ -154,124 +153,98 @@ class _ContraventionDetailsScreenState
             const SizedBox(height: 16),
             _mediaSection(context),
             const SizedBox(height: 24),
-            // Action buttons
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00d4ff),
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder:
-                          (_) => AssignContraventionScreen(
-                            contraventionId: widget.contravention.rowid ?? 0,
-                            motif: widget.contravention.motif,
-                          ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Assigner à un Résident',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    onPressed: () async {
-                      final result = await Navigator.of(
-                        context,
-                      ).push<Map<String, dynamic>>(
-                        MaterialPageRoute(
-                          builder:
-                              (_) => ClasserSansSuiteScreen(
-                                contravention: widget.contravention,
-                              ),
-                        ),
-                      );
-
-                      if (result != null) {
-                        final motif = result['motif'] as String? ?? '';
-                        try {
-                          final apiService = ApiService();
-                          await apiService.put(
-                            '/contravention/classer-sans-suite/${widget.contravention.ref}',
-                            {'motif': motif},
-                          );
-
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Contravention classée sans suite',
+            // Action buttons - only show if contravention is still pending
+            if (widget.contravention.status.toUpperCase() ==
+                'SOUS_VERIFICATION') ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: () async {
+                        final result = await Navigator.of(
+                          context,
+                        ).push<Map<String, dynamic>>(
+                          MaterialPageRoute(
+                            builder:
+                                (_) => ClasserSansSuiteScreen(
+                                  contravention: widget.contravention,
                                 ),
-                                backgroundColor: Colors.green,
-                              ),
+                          ),
+                        );
+
+                        if (result != null) {
+                          final motif = result['motif'] as String? ?? '';
+                          try {
+                            final apiService = ApiService();
+                            await apiService.put(
+                              '/contravention/classer-sans-suite/${widget.contravention.ref}',
+                              {'motif': motif},
                             );
-                            Navigator.of(context).pop();
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Erreur: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Contravention classée sans suite',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              Navigator.of(context).pop();
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Erreur: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           }
                         }
-                      }
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      child: Text('Classer sans suite'),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder:
-                              (_) => AccepterContraventionScreen(
-                                contravention: widget.contravention,
-                              ),
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
                         ),
-                      );
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+                        child: Text('Classer sans suite'),
                       ),
-                      child: Text('Accepter'),
                     ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder:
+                                (_) => AccepterContraventionScreen(
+                                  contravention: widget.contravention,
+                                ),
+                          ),
+                        );
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        child: Text('Accepter'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -420,26 +393,11 @@ class _ContraventionDetailsScreenState
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  residentAdresse,
-                  style: const TextStyle(color: Colors.white70),
-                ),
+                
               ],
             ),
           ),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppTheme.borderColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              // TODO: Navigate to resident history
-            },
-            child: const Text('Historique'),
-          ),
+          
         ],
       ),
     );

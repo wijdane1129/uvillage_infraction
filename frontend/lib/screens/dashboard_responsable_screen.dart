@@ -24,11 +24,28 @@ class _DashboardResponsableScreenState
   DashboardResponsable? dashboard;
   bool isLoading = true;
   String? error;
+  String _selectedStatusFilter = 'TOUS'; // Filter state
+
+  // Auto-refresh timer
+  late final _autoRefreshTimer = Stream.periodic(const Duration(seconds: 30));
+  bool _disposed = false;
 
   @override
   void initState() {
     super.initState();
     loadDashboard();
+    // Start auto-refresh every 30 seconds
+    _autoRefreshTimer.listen((_) {
+      if (!_disposed && mounted) {
+        loadDashboard();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   Future<void> loadDashboard() async {
@@ -231,6 +248,30 @@ class _DashboardResponsableScreenState
       return const SizedBox.shrink();
     }
 
+    // Get current month name
+    final now = DateTime.now();
+    const monthNames = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre',
+    ];
+    final currentMonth = monthNames[now.month - 1];
+
+    // Find max count for Y axis
+    final maxCount = dashboard!.chartData
+        .map((e) => e.count)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    final yMax = (maxCount + 2).toDouble();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -241,9 +282,9 @@ class _DashboardResponsableScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Évolution des infractions (30 jours)',
-            style: TextStyle(
+          Text(
+            'Infractions par jour - $currentMonth ${now.year}',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -251,19 +292,27 @@ class _DashboardResponsableScreenState
           ),
           const SizedBox(height: 20),
           SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 10,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.white.withOpacity(0.1),
-                      strokeWidth: 1,
-                    );
-                  },
+            height: 220,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: yMax,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final day = dashboard!.chartData[groupIndex].day;
+                      final count = rod.toY.toInt();
+                      return BarTooltipItem(
+                        'Jour $day\n$count infraction${count > 1 ? 's' : ''}',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 titlesData: FlTitlesData(
                   rightTitles: const AxisTitles(
@@ -272,17 +321,18 @@ class _DashboardResponsableScreenState
                   topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  bottomTitles: AxisTitles(
+                  leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: 5,
+                      reservedSize: 28,
+                      interval: 1,
                       getTitlesWidget: (value, meta) {
-                        if (value.toInt() % 5 == 0) {
+                        if (value == value.roundToDouble() && value >= 0) {
                           return Text(
                             value.toInt().toString(),
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.5),
-                              fontSize: 12,
+                              fontSize: 10,
                             ),
                           );
                         }
@@ -290,6 +340,43 @@ class _DashboardResponsableScreenState
                       },
                     ),
                   ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx >= 0 && idx < dashboard!.chartData.length) {
+                          final day = dashboard!.chartData[idx].day;
+                          // Show every 5th day + 1st day
+                          if (day == 1 || day % 5 == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '$day',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.5),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 1,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: Colors.white.withOpacity(0.05),
+                      strokeWidth: 1,
+                    );
+                  },
                 ),
                 borderData: FlBorderData(
                   show: true,
@@ -298,25 +385,29 @@ class _DashboardResponsableScreenState
                     left: BorderSide(color: Colors.white.withOpacity(0.1)),
                   ),
                 ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots:
-                        dashboard!.chartData
-                            .map(
-                              (e) =>
-                                  FlSpot(e.day.toDouble(), e.count.toDouble()),
-                            )
-                            .toList(),
-                    isCurved: true,
-                    color: AppTheme.purpleAccent,
-                    barWidth: 3,
-                    dotData: FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppTheme.purpleAccent.withOpacity(0.2),
-                    ),
-                  ),
-                ],
+                barGroups:
+                    dashboard!.chartData.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final point = entry.value;
+                      final today = DateTime.now().day;
+                      final isToday = point.day == today;
+                      return BarChartGroupData(
+                        x: idx,
+                        barRods: [
+                          BarChartRodData(
+                            toY: point.count.toDouble(),
+                            color:
+                                isToday
+                                    ? const Color(0xFF00d4ff)
+                                    : AppTheme.purpleAccent,
+                            width: dashboard!.chartData.length > 20 ? 4 : 8,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(3),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
               ),
             ),
           ),
@@ -357,28 +448,247 @@ class _DashboardResponsableScreenState
       return const SizedBox.shrink();
     }
 
+    // Filter infractions by selected status
+    final filtered =
+        _selectedStatusFilter == 'TOUS'
+            ? dashboard!.recentInfractions
+            : dashboard!.recentInfractions
+                .where((i) => i.statut == _selectedStatusFilter)
+                .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        const Text(
+          'Toutes les infractions',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Status filter chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterChip(
+                'TOUS',
+                'Tous',
+                Colors.blueGrey,
+                dashboard!.recentInfractions.length,
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                'SOUS_VERIFICATION',
+                'En attente',
+                const Color(0xFFFFC107),
+                dashboard!.recentInfractions
+                    .where((i) => i.statut == 'SOUS_VERIFICATION')
+                    .length,
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                'ACCEPTEE',
+                'Acceptées',
+                const Color(0xFF4CAF50),
+                dashboard!.recentInfractions
+                    .where((i) => i.statut == 'ACCEPTEE')
+                    .length,
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                'CLASSEE_SANS_SUITE',
+                'Rejetées',
+                const Color(0xFFE53935),
+                dashboard!.recentInfractions
+                    .where((i) => i.statut == 'CLASSEE_SANS_SUITE')
+                    .length,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (filtered.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.darkBgAlt,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                'Aucune infraction avec ce statut',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.5),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          )
+        else
+          ...filtered
+              .map((infraction) => _buildInfractionCard(infraction))
+              .toList(),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String status, String label, Color color, int count) {
+    final isSelected = _selectedStatusFilter == status;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedStatusFilter = status;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.3) : AppTheme.darkBgAlt,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.white.withOpacity(0.15),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Dernières infractions',
+            Text(
+              label,
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                color: isSelected ? color : Colors.white.withOpacity(0.7),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(isSelected ? 0.4 : 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        ...dashboard!.recentInfractions
-            .map((infraction) => _buildInfractionCard(infraction))
-            .toList(),
-      ],
+      ),
     );
+  }
+
+  /// Open contravention details screen
+  Future<void> _openContraventionDetails(RecentContravention infraction) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => const Center(
+            child: CircularProgressIndicator(color: AppTheme.purpleAccent),
+          ),
+    );
+    try {
+      final response = await ApiClient.dio.get(
+        '/contraventions/ref/${infraction.ref}',
+      );
+      Navigator.of(context).pop(); // dismiss loading
+      if (response.statusCode == 200) {
+        final apiData = response.data as Map<String, dynamic>;
+        final contravention = Contravention.fromJson(apiData);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    ContraventionDetailsScreen(contravention: contravention),
+          ),
+        );
+      } else {
+        throw Exception('Failed to load contravention details');
+      }
+    } catch (e) {
+      Navigator.of(context).pop();
+      // Fallback: navigate with available data (no media)
+      final contravention = Contravention(
+        rowid: infraction.rowid,
+        description: infraction.description,
+        media: [],
+        status: infraction.statut,
+        dateTime: infraction.dateCreation,
+        ref: infraction.ref,
+        userAuthor: infraction.agentName,
+        tiers: infraction.residentName,
+        motif: infraction.motif,
+        residentAdresse: infraction.residentAdresse,
+        residentName: infraction.residentName,
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  ContraventionDetailsScreen(contravention: contravention),
+        ),
+      );
+    }
+  }
+
+  /// Download facture PDF for a contravention
+  Future<void> _downloadFacture(RecentContravention infraction) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => const Center(
+            child: CircularProgressIndicator(color: Colors.orange),
+          ),
+    );
+    try {
+      final response = await ApiClient.dio.get(
+        '/contraventions/ref/${infraction.ref}',
+      );
+      Navigator.of(context).pop();
+      if (response.statusCode == 200) {
+        final apiData = response.data as Map<String, dynamic>;
+        final pdfUrl = apiData['facturePdfUrl'] as String?;
+        if (pdfUrl != null && pdfUrl.isNotEmpty) {
+          final baseUrl = ApiConfig.BACKEND_API_URL;
+          final fullUrl = '$baseUrl/$pdfUrl';
+          final uri = Uri.parse(fullUrl);
+          try {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } catch (_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Impossible d\'ouvrir le PDF'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Aucune facture disponible'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   Widget _buildInfractionCard(RecentContravention infraction) {
@@ -433,7 +743,7 @@ class _DashboardResponsableScreenState
             ),
           ),
           Text(
-            '${infraction.motif} - Stationnement interdit',
+            infraction.motif,
             style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
           const SizedBox(height: 12),
@@ -461,76 +771,7 @@ class _DashboardResponsableScreenState
               ),
               if (infraction.statut == 'SOUS_VERIFICATION')
                 ElevatedButton(
-                  onPressed: () async {
-                    // Show loading indicator
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder:
-                          (ctx) => const Center(
-                            child: CircularProgressIndicator(
-                              color: AppTheme.purpleAccent,
-                            ),
-                          ),
-                    );
-
-                    try {
-                      // Fetch full contravention with media from backend API
-                      final response = await ApiClient.dio.get(
-                        '/contraventions/ref/${infraction.ref}',
-                      );
-                      Navigator.of(context).pop(); // dismiss loading
-
-                      if (response.statusCode == 200) {
-                        final apiData = response.data as Map<String, dynamic>;
-
-                        // Use fromJson to properly extract all fields including tiersId
-                        final contravention = Contravention.fromJson(apiData);
-
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => ContraventionDetailsScreen(
-                                  contravention: contravention,
-                                ),
-                          ),
-                        );
-                      } else {
-                        throw Exception('Failed to load contravention details');
-                      }
-                    } catch (e) {
-                      Navigator.of(context).pop(); // dismiss loading
-                      print(
-                        '⚠️ Error fetching full contravention, falling back: $e',
-                      );
-
-                      // Fallback: navigate with available data (no media)
-                      final contravention = Contravention(
-                        rowid: infraction.rowid,
-                        description: infraction.description,
-                        media: [],
-                        status: infraction.statut,
-                        dateTime: infraction.dateCreation,
-                        ref: infraction.ref,
-                        userAuthor: infraction.agentName,
-                        tiers: infraction.residentName,
-                        motif: infraction.motif,
-                        residentAdresse: infraction.residentAdresse,
-                        residentName: infraction.residentName,
-                      );
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => ContraventionDetailsScreen(
-                                contravention: contravention,
-                              ),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: () => _openContraventionDetails(infraction),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.purpleAccent,
                     shape: RoundedRectangleBorder(
@@ -550,53 +791,8 @@ class _DashboardResponsableScreenState
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // View details button
                     ElevatedButton.icon(
-                      onPressed: () async {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder:
-                              (ctx) => const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.green,
-                                ),
-                              ),
-                        );
-                        try {
-                          final response = await ApiClient.dio.get(
-                            '/contraventions/ref/${infraction.ref}',
-                          );
-                          Navigator.of(context).pop();
-                          if (response.statusCode == 200) {
-                            final apiData =
-                                response.data as Map<String, dynamic>;
-                            // Use fromJson to properly extract all fields including tiersId
-                            final contravention = Contravention.fromJson(
-                              apiData,
-                            );
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => ContraventionDetailsScreen(
-                                      contravention: contravention,
-                                    ),
-                              ),
-                            );
-                          } else {
-                            throw Exception('Failed to load contravention');
-                          }
-                        } catch (e) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Erreur: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: () => _openContraventionDetails(infraction),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade700,
                         shape: RoundedRectangleBorder(
@@ -617,67 +813,8 @@ class _DashboardResponsableScreenState
                       ),
                     ),
                     const SizedBox(width: 6),
-                    // Download facture button
                     ElevatedButton.icon(
-                      onPressed: () async {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder:
-                              (ctx) => const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.orange,
-                                ),
-                              ),
-                        );
-                        try {
-                          final response = await ApiClient.dio.get(
-                            '/contraventions/ref/${infraction.ref}',
-                          );
-                          Navigator.of(context).pop();
-                          if (response.statusCode == 200) {
-                            final apiData =
-                                response.data as Map<String, dynamic>;
-                            final pdfUrl = apiData['facturePdfUrl'] as String?;
-                            if (pdfUrl != null && pdfUrl.isNotEmpty) {
-                              // Build full URL for the PDF
-                              final baseUrl = ApiConfig.BACKEND_API_URL;
-                              final fullUrl = '$baseUrl/$pdfUrl';
-                              final uri = Uri.parse(fullUrl);
-                              try {
-                                await launchUrl(
-                                  uri,
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              } catch (_) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Impossible d\'ouvrir le PDF',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Aucune facture disponible'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            }
-                          }
-                        } catch (e) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Erreur: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: () => _downloadFacture(infraction),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade700,
                         shape: RoundedRectangleBorder(
@@ -698,6 +835,26 @@ class _DashboardResponsableScreenState
                       ),
                     ),
                   ],
+                )
+              else
+                // CLASSEE_SANS_SUITE or any other status
+                ElevatedButton.icon(
+                  onPressed: () => _openContraventionDetails(infraction),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade700,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                  ),
+                  icon: const Icon(Icons.visibility, size: 14),
+                  label: const Text(
+                    'Détails',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
                 ),
             ],
           ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/agent_auth_provider.dart';
 import '../config/app_theme.dart';
@@ -19,7 +21,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _localUser = UserProvider();
   bool profileIsLoading = false;
-  String? _selectedLanguage;
   File? _profileImageFile;
   final ImagePicker _picker = ImagePicker();
   late TextEditingController _usernameController;
@@ -30,7 +31,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedLanguage = _localUser.language;
+    _loadProfileImage();
     // initialize controllers with current provider values
     final currentName = ref.read(agentNameProvider);
     final currentEmail = ref.read(agentEmailProvider);
@@ -42,6 +43,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
     _passwordController = TextEditingController(text: _localUser.password);
     _currentPasswordController = TextEditingController();
+  }
+
+  /// Load saved profile image from Hive
+  void _loadProfileImage() {
+    final box = Hive.box('authBox');
+    final savedPath = box.get('profile_image_path') as String?;
+    if (savedPath != null && File(savedPath).existsSync()) {
+      setState(() {
+        _profileImageFile = File(savedPath);
+      });
+    }
+  }
+
+  /// Save profile image to app directory and persist path in Hive
+  Future<void> _saveProfileImage(File imageFile) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final savedFile = await imageFile.copy('${appDir.path}/$fileName');
+    final box = Hive.box('authBox');
+    await box.put('profile_image_path', savedFile.path);
+    setState(() {
+      _profileImageFile = savedFile;
+    });
   }
 
   @override
@@ -61,9 +85,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         imageQuality: 85,
       );
       if (picked != null) {
-        setState(() {
-          _profileImageFile = File(picked.path);
-        });
+        await _saveProfileImage(File(picked.path));
       }
     } catch (e) {
       // ignore errors for now, could show a Snackbar
@@ -183,30 +205,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: _selectedLanguage,
-                    decoration: InputDecoration(
-                      labelText: locale.language,
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      filled: true,
-                      fillColor: AppTheme.darkBg,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    dropdownColor: AppTheme.darkBgAlt,
-                    items: const [
-                      DropdownMenuItem(value: 'ar', child: Text('ar')),
-                      DropdownMenuItem(value: 'fr', child: Text('fr')),
-                      DropdownMenuItem(value: 'en', child: Text('en')),
-                    ],
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedLanguage = val;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
@@ -278,9 +276,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       }
 
                       setState(() {
-                        if (_selectedLanguage != null) {
-                          _localUser.setLanguage(_selectedLanguage!);
-                        }
                         profileIsLoading = false;
                       });
 
@@ -305,7 +300,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = {
       'username': agentName.isNotEmpty ? agentName : _localUser.fullName,
       'email': agentEmail.isNotEmpty ? agentEmail : _localUser.email,
-      'language': _localUser.language,
     };
 
     return Scaffold(
@@ -313,7 +307,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: Text(
           locale.profile,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: AppTheme.darkBg,
         elevation: 0,
@@ -367,9 +364,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoItem(locale.username.toUpperCase(), user['username']!),
+                    _buildInfoItem(
+                      locale.username.toUpperCase(),
+                      user['username']!,
+                    ),
                     _buildInfoItem(locale.email.toUpperCase(), user['email']!),
-                    _buildInfoItem(locale.language.toUpperCase(), user['language']!),
                     _buildInfoItem(locale.password.toUpperCase(), "••••••••"),
                   ],
                 ),

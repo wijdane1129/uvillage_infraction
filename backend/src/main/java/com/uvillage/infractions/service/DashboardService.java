@@ -81,10 +81,8 @@ public class DashboardService {
         // Chart data for last 30 days
         List<DashboardResponsableDto.ChartDataPoint> chartData = getChartDataLast30Days();
 
-        // Recent infractions (limit to 3)
-        List<Contravention> recent = dashboardRepository.findRecentInfractions().stream()
-                .limit(3)
-                .collect(Collectors.toList());
+        // All infractions (no limit) - sorted by most recent first
+        List<Contravention> recent = dashboardRepository.findRecentInfractions();
         List<RecentContraventionDto> recentDtos = recent.stream()
                 .map(this::convertToRecentDto)
                 .collect(Collectors.toList());
@@ -105,11 +103,12 @@ public class DashboardService {
     }
 
     private List<DashboardResponsableDto.ChartDataPoint> getChartDataLast30Days() {
-        List<Object[]> dailyCounts = dashboardRepository.countDailyLast30Days();
+        List<Object[]> dailyCounts = dashboardRepository.countDailyCurrentMonth();
         LocalDate today = LocalDate.now();
-        LocalDate thirtyDaysAgo = today.minus(30, ChronoUnit.DAYS);
+        LocalDate firstOfMonth = today.withDayOfMonth(1);
+        int daysInMonth = today.lengthOfMonth();
 
-        Map<LocalDate, Integer> countsByDate = new HashMap<>();
+        Map<Integer, Integer> countsByDayOfMonth = new HashMap<>();
         for (Object[] row : dailyCounts) {
             Object rawDate = row[0];
             LocalDate date;
@@ -126,15 +125,14 @@ public class DashboardService {
             }
 
             Integer count = ((Number) row[1]).intValue();
-            countsByDate.put(date, count);
+            countsByDayOfMonth.put(date.getDayOfMonth(), count);
         }
 
         List<DashboardResponsableDto.ChartDataPoint> chartPoints = new ArrayList<>();
-        for (int i = 0; i < 30; i++) {
-            LocalDate date = thirtyDaysAgo.plus(i, ChronoUnit.DAYS);
-            int count = countsByDate.getOrDefault(date, 0);
+        for (int dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++) {
+            int count = countsByDayOfMonth.getOrDefault(dayOfMonth, 0);
             chartPoints.add(DashboardResponsableDto.ChartDataPoint.builder()
-                    .day(i + 1)
+                    .day(dayOfMonth)
                     .count(count)
                     .build());
         }

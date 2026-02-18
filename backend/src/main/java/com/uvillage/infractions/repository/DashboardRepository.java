@@ -41,8 +41,8 @@ public interface DashboardRepository extends JpaRepository<Contravention, Long> 
                      "ORDER BY c.dateCreation DESC")
        List<Contravention> findLast30DaysInfractions(@Param("startDate") LocalDate startDate);
 
-       // Recent infractions (last 3) - with media eagerly loaded, LIFO order
-       @Query("SELECT DISTINCT c FROM Contravention c LEFT JOIN FETCH c.media " +
+       // Recent infractions - with media and userAuthor eagerly loaded, LIFO order
+       @Query("SELECT DISTINCT c FROM Contravention c LEFT JOIN FETCH c.media LEFT JOIN FETCH c.userAuthor " +
                      "ORDER BY c.dateCreation DESC, c.rowid DESC")
        List<Contravention> findRecentInfractions();
 
@@ -53,4 +53,8 @@ public interface DashboardRepository extends JpaRepository<Contravention, Long> 
        // Daily count for last 30 days
        @Query(value = "SELECT DATE(date_creation) as date, COUNT(*) as count FROM contraventions WHERE date_creation >= CURDATE() - INTERVAL 30 DAY GROUP BY DATE(date_creation) ORDER BY date ASC", nativeQuery = true)
        List<Object[]> countDailyLast30Days();
+
+       // Daily count for current month (resets every month)
+       @Query(value = "SELECT DATE(date_creation) as date, COUNT(*) as count FROM contraventions WHERE MONTH(date_creation) = MONTH(CURDATE()) AND YEAR(date_creation) = YEAR(CURDATE()) GROUP BY DATE(date_creation) ORDER BY date ASC", nativeQuery = true)
+       List<Object[]> countDailyCurrentMonth();
 }
