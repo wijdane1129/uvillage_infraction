@@ -466,45 +466,34 @@ class _DashboardResponsableScreenState
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (ctx) => const Center(
-                        child: CircularProgressIndicator(color: AppTheme.purpleAccent),
-                      ),
+                      builder:
+                          (ctx) => const Center(
+                            child: CircularProgressIndicator(
+                              color: AppTheme.purpleAccent,
+                            ),
+                          ),
                     );
 
                     try {
                       // Fetch full contravention with media from backend API
-                      final response = await ApiClient.dio.get('/contraventions/ref/${infraction.ref}');
+                      final response = await ApiClient.dio.get(
+                        '/contraventions/ref/${infraction.ref}',
+                      );
                       Navigator.of(context).pop(); // dismiss loading
 
                       if (response.statusCode == 200) {
                         final apiData = response.data as Map<String, dynamic>;
-                        
-                        // Extract media from API response
-                        final mediaList = (apiData['media'] as List<dynamic>? ?? [])
-                            .map((e) => ContraventionMediaModels.fromJson(e as Map<String, dynamic>))
-                            .toList();
 
-                        // Build contravention using dashboard names (from CSV mock) + API media
-                        final contravention = Contravention(
-                          rowid: infraction.rowid,
-                          description: infraction.description,
-                          media: mediaList,
-                          status: infraction.statut,
-                          dateTime: infraction.dateCreation,
-                          ref: infraction.ref,
-                          userAuthor: infraction.agentName,
-                          tiers: infraction.residentName,
-                          motif: infraction.motif,
-                          residentAdresse: infraction.residentAdresse,
-                          residentName: infraction.residentName,
-                        );
+                        // Use fromJson to properly extract all fields including tiersId
+                        final contravention = Contravention.fromJson(apiData);
 
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ContraventionDetailsScreen(
-                              contravention: contravention,
-                            ),
+                            builder:
+                                (context) => ContraventionDetailsScreen(
+                                  contravention: contravention,
+                                ),
                           ),
                         );
                       } else {
@@ -512,7 +501,9 @@ class _DashboardResponsableScreenState
                       }
                     } catch (e) {
                       Navigator.of(context).pop(); // dismiss loading
-                      print('⚠️ Error fetching full contravention, falling back: $e');
+                      print(
+                        '⚠️ Error fetching full contravention, falling back: $e',
+                      );
 
                       // Fallback: navigate with available data (no media)
                       final contravention = Contravention(
@@ -532,9 +523,10 @@ class _DashboardResponsableScreenState
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ContraventionDetailsScreen(
-                            contravention: contravention,
-                          ),
+                          builder:
+                              (context) => ContraventionDetailsScreen(
+                                contravention: contravention,
+                              ),
                         ),
                       );
                     }
@@ -564,37 +556,32 @@ class _DashboardResponsableScreenState
                         showDialog(
                           context: context,
                           barrierDismissible: false,
-                          builder: (ctx) => const Center(
-                            child: CircularProgressIndicator(color: Colors.green),
-                          ),
+                          builder:
+                              (ctx) => const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.green,
+                                ),
+                              ),
                         );
                         try {
-                          final response = await ApiClient.dio.get('/contraventions/ref/${infraction.ref}');
+                          final response = await ApiClient.dio.get(
+                            '/contraventions/ref/${infraction.ref}',
+                          );
                           Navigator.of(context).pop();
                           if (response.statusCode == 200) {
-                            final apiData = response.data as Map<String, dynamic>;
-                            final mediaList = (apiData['media'] as List<dynamic>? ?? [])
-                                .map((e) => ContraventionMediaModels.fromJson(e as Map<String, dynamic>))
-                                .toList();
-                            final contravention = Contravention(
-                              rowid: infraction.rowid,
-                              description: infraction.description,
-                              media: mediaList,
-                              status: infraction.statut,
-                              dateTime: infraction.dateCreation,
-                              ref: infraction.ref,
-                              userAuthor: infraction.agentName,
-                              tiers: infraction.residentName,
-                              motif: infraction.motif,
-                              residentAdresse: infraction.residentAdresse,
-                              residentName: infraction.residentName,
+                            final apiData =
+                                response.data as Map<String, dynamic>;
+                            // Use fromJson to properly extract all fields including tiersId
+                            final contravention = Contravention.fromJson(
+                              apiData,
                             );
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ContraventionDetailsScreen(
-                                  contravention: contravention,
-                                ),
+                                builder:
+                                    (context) => ContraventionDetailsScreen(
+                                      contravention: contravention,
+                                    ),
                               ),
                             );
                           } else {
@@ -603,7 +590,10 @@ class _DashboardResponsableScreenState
                         } catch (e) {
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Erreur: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       },
@@ -612,10 +602,19 @@ class _DashboardResponsableScreenState
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
                       ),
                       icon: const Icon(Icons.visibility, size: 14),
-                      label: const Text('Détails', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      label: const Text(
+                        'Détails',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 6),
                     // Download facture button
@@ -624,15 +623,21 @@ class _DashboardResponsableScreenState
                         showDialog(
                           context: context,
                           barrierDismissible: false,
-                          builder: (ctx) => const Center(
-                            child: CircularProgressIndicator(color: Colors.orange),
-                          ),
+                          builder:
+                              (ctx) => const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.orange,
+                                ),
+                              ),
                         );
                         try {
-                          final response = await ApiClient.dio.get('/contraventions/ref/${infraction.ref}');
+                          final response = await ApiClient.dio.get(
+                            '/contraventions/ref/${infraction.ref}',
+                          );
                           Navigator.of(context).pop();
                           if (response.statusCode == 200) {
-                            final apiData = response.data as Map<String, dynamic>;
+                            final apiData =
+                                response.data as Map<String, dynamic>;
                             final pdfUrl = apiData['facturePdfUrl'] as String?;
                             if (pdfUrl != null && pdfUrl.isNotEmpty) {
                               // Build full URL for the PDF
@@ -640,22 +645,36 @@ class _DashboardResponsableScreenState
                               final fullUrl = '$baseUrl/$pdfUrl';
                               final uri = Uri.parse(fullUrl);
                               try {
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
                               } catch (_) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Impossible d\'ouvrir le PDF'), backgroundColor: Colors.red),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Impossible d\'ouvrir le PDF',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
                                 );
                               }
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Aucune facture disponible'), backgroundColor: Colors.orange),
+                                const SnackBar(
+                                  content: Text('Aucune facture disponible'),
+                                  backgroundColor: Colors.orange,
+                                ),
                               );
                             }
                           }
                         } catch (e) {
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Erreur: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       },
@@ -664,10 +683,19 @@ class _DashboardResponsableScreenState
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
                       ),
                       icon: const Icon(Icons.download, size: 14),
-                      label: const Text('Facture', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      label: const Text(
+                        'Facture',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),

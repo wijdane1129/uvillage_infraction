@@ -15,8 +15,8 @@ class ApiClient {
       // Web (Edge browser): use localhost
       return 'http://localhost:8080/api/v1';
     } else {
-      // Mobile (Android phone): use network IP (172.20.220.78 is the Wi-Fi interface)
-      return 'http://192.168.8.167:8080/api/v1';
+      // Mobile (Android phone): use Wi-Fi IP
+      return 'http://192.168.110.153:8080/api/v1';
     }
   }
 

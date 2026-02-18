@@ -163,4 +163,42 @@ public class ContraventionController {
             return ResponseEntity.status(500).build();
         }
     }
+
+    // ---------- Recidive count for a resident/motif or room/building/motif ----------
+    /**
+     * Returns the number of previously ACCEPTED contraventions for a given resident (or room/building) and motif.
+     * Priority: residentId > room/building. If residentId is provided, it takes precedence.
+     */
+    @GetMapping("/recidive-count")
+    public ResponseEntity<?> getRecidiveCount(
+            @RequestParam(required = false) Long residentId,
+            @RequestParam(required = false) String numeroChambre,
+            @RequestParam(required = false) String batiment,
+            @RequestParam String motif) {
+        try {
+            int count;
+            if (residentId != null) {
+                // PRIMARY: count by resident ID
+                count = contraventionService.getRecidiveCountByResident(residentId, motif);
+                logger.info("🔄 [RECIDIVE] ResidentId={}, Motif={} => count={}", residentId, motif, count);
+            } else if (numeroChambre != null && batiment != null) {
+                // FALLBACK: count by room/building
+                count = contraventionService.getRecidiveCount(numeroChambre, batiment, motif);
+                logger.info("🔄 [RECIDIVE] Room={}, Building={}, Motif={} => count={}", numeroChambre, batiment, motif, count);
+            } else {
+                logger.warn("⚠️ [RECIDIVE] No residentId and no room/building provided");
+                count = 0;
+            }
+            // count = number of previously accepted contraventions
+            int nextOccurrence = count + 1;
+            logger.info("🔄 [RECIDIVE] count={}, nextOccurrence={}", count, nextOccurrence);
+            return ResponseEntity.ok(Map.of(
+                    "previousCount", count,
+                    "nextOccurrence", nextOccurrence
+            ));
+        } catch (Exception ex) {
+            logger.error("Error getting recidive count", ex);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Internal error"));
+        }
+    }
 }

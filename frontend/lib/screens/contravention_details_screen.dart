@@ -95,7 +95,7 @@ class _ContraventionDetailsScreenState
     if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
       return mediaUrl;
     }
-    
+
     // Otherwise, construct the full URL using the base URL
     final baseUrl = ApiClient.dio.options.baseUrl.replaceAll('/api/v1', '');
     return '$baseUrl/$mediaUrl';
@@ -193,7 +193,9 @@ class _ContraventionDetailsScreenState
                       backgroundColor: Colors.red,
                     ),
                     onPressed: () async {
-                      final result = await Navigator.of(context).push<Map<String, dynamic>>(
+                      final result = await Navigator.of(
+                        context,
+                      ).push<Map<String, dynamic>>(
                         MaterialPageRoute(
                           builder:
                               (_) => ClasserSansSuiteScreen(
@@ -210,11 +212,13 @@ class _ContraventionDetailsScreenState
                             '/contravention/classer-sans-suite/${widget.contravention.ref}',
                             {'motif': motif},
                           );
-                          
+
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Contravention classée sans suite'),
+                                content: Text(
+                                  'Contravention classée sans suite',
+                                ),
                                 backgroundColor: Colors.green,
                               ),
                             );
@@ -363,7 +367,11 @@ class _ContraventionDetailsScreenState
       residentName = _mockResident!.fullName;
       residentAdresse = _mockResident!.adresse;
     } else {
-      residentName = widget.contravention.residentName ?? 'Résident inconnu';
+      residentName =
+          widget.contravention.residentName ??
+          (widget.contravention.tiers.isNotEmpty
+              ? widget.contravention.tiers
+              : 'Résident inconnu');
       residentAdresse =
           widget.contravention.residentAdresse ?? 'Adresse inconnue';
     }
@@ -448,10 +456,7 @@ class _ContraventionDetailsScreenState
         child: Center(
           child: Text(
             'Aucun média attaché',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white54, fontSize: 14),
           ),
         ),
       );
@@ -492,7 +497,9 @@ class _ContraventionDetailsScreenState
             final fullUrl = _getMediaUrl(media.mediaUrl);
             final isVideo = media.mediaType.toLowerCase().contains('video');
 
-            print('🖼️ [MEDIA] Displaying media: $fullUrl (type: ${media.mediaType})');
+            print(
+              '🖼️ [MEDIA] Displaying media: $fullUrl (type: ${media.mediaType})',
+            );
 
             return GestureDetector(
               onTap: () {
@@ -511,12 +518,13 @@ class _ContraventionDetailsScreenState
                       CachedNetworkImage(
                         imageUrl: fullUrl,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[800],
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
+                        placeholder:
+                            (context, url) => Container(
+                              color: Colors.grey[800],
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
                         errorWidget: (context, url, error) {
                           print('❌ [MEDIA] Error loading image: $error');
                           return Container(
@@ -524,11 +532,18 @@ class _ContraventionDetailsScreenState
                             child: const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.broken_image, color: Colors.white54, size: 32),
+                                Icon(
+                                  Icons.broken_image,
+                                  color: Colors.white54,
+                                  size: 32,
+                                ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Erreur de chargement',
-                                  style: TextStyle(color: Colors.white54, fontSize: 10),
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 10,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ],

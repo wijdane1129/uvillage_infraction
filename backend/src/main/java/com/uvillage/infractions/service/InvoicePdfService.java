@@ -33,10 +33,12 @@ public class InvoicePdfService {
      * Génère une facture PDF pour une contravention confirmée
      * @param contravention La contravention à facturer
      * @param mockResident Données du résident mock (peut être null)
+     * @param montant Le montant calculé selon la récidive
+     * @param occurrence Le numéro d'occurrence (1 = première fois, 2 = 2ème, etc.)
      * @return Le chemin du fichier PDF généré
      * @throws IOException En cas d'erreur lors de la génération du PDF
      */
-    public String generateInvoicePdf(Contravention contravention, ResidentMockService.MockResident mockResident) throws IOException {
+    public String generateInvoicePdf(Contravention contravention, ResidentMockService.MockResident mockResident, Double montant, int occurrence) throws IOException {
         logger.info("Starting PDF generation for contravention: {}", contravention.getRef());
         
         // Créer le répertoire s'il n'existe pas
@@ -64,7 +66,7 @@ public class InvoicePdfService {
             
             // Ajouter le contenu du PDF
             logger.info("Adding content to PDF...");
-            addInvoiceContent(document, contravention, refFacture, mockResident);
+            addInvoiceContent(document, contravention, refFacture, mockResident, montant, occurrence);
             logger.info("Content added successfully");
             
             document.close();
@@ -80,7 +82,7 @@ public class InvoicePdfService {
     /**
      * Ajoute le contenu de la facture au document PDF
      */
-    private void addInvoiceContent(Document document, Contravention contravention, String refFacture, ResidentMockService.MockResident mockResident) throws DocumentException {
+    private void addInvoiceContent(Document document, Contravention contravention, String refFacture, ResidentMockService.MockResident mockResident, Double montant, int occurrence) throws DocumentException {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         
         Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
@@ -182,15 +184,28 @@ public class InvoicePdfService {
         PdfPTable montantTable = new PdfPTable(2);
         montantTable.setWidthPercentage(100);
 
-        String montant = contravention.getTypeContravention() != null && contravention.getTypeContravention().getMontant1() != null
-                ? contravention.getTypeContravention().getMontant1() + " DH"
+        // Use the passed montant (calculated based on recidive)
+        String montantStr = montant != null && montant > 0
+                ? String.format("%.0f DH", montant)
                 : "À déterminer";
 
         PdfPCell montantLabelCell = new PdfPCell(new Paragraph("Montant:", headerFont));
-        PdfPCell montantValueCell = new PdfPCell(new Paragraph(montant, new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD)));
+        PdfPCell montantValueCell = new PdfPCell(new Paragraph(montantStr, new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD)));
 
         montantTable.addCell(montantLabelCell);
         montantTable.addCell(montantValueCell);
+
+        // Show recidive info
+        String occurrenceLabel;
+        if (occurrence <= 1) {
+            occurrenceLabel = "1ère fois";
+        } else {
+            occurrenceLabel = occurrence + "ème fois";
+        }
+        PdfPCell recidiveLabelCell = new PdfPCell(new Paragraph("Occurrence:", headerFont));
+        PdfPCell recidiveValueCell = new PdfPCell(new Paragraph(occurrenceLabel, normalFont));
+        montantTable.addCell(recidiveLabelCell);
+        montantTable.addCell(recidiveValueCell);
 
         document.add(montantTable);
         document.add(new Paragraph("\n"));

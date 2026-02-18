@@ -133,7 +133,8 @@ public class SecurityConfig {
                 configuration.setAllowedOriginPatterns(Arrays.asList(
                                 "http://localhost:*",
                                 "http://127.0.0.1:*",
-                                "http://192.168.8.167:*"));
+                                "http://192.168.110.153:*",
+                                "http://172.22.144.1:*"));
                 configuration.setAllowedMethods(Arrays.asList(
                                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                 configuration.setAllowedHeaders(Arrays.asList(

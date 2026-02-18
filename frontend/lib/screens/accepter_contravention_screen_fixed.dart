@@ -33,38 +33,100 @@ class _AccepterContraventionScreenState
   bool _isLoadingResident = true;
   Motif? _motif;
   bool _isLoadingMotif = true;
+  bool _isLoadingRecidive = true;
+  int _recidiveOccurrence = 1; // 1 = première fois par défaut
 
   @override
   void initState() {
     super.initState();
     _loadResidentData();
-    _loadMotifData();
+    _loadRecidiveCount();
 
-    // 1. Logic to determine the Recidive Model
-    if (widget.contraventionRecidive != null) {
-      _computedRecidive = widget.contraventionRecidive!;
-    } else {
-      // Calculate from history or default to 1 (First Time)
-      int count = 1;
-      if (widget.history != null) {
-        final motif = widget.contravention.motif.trim().toLowerCase();
-        final prevCount =
-            widget.history!
-                .where((c) => c.motif.trim().toLowerCase() == motif)
-                .length;
-        count = prevCount + 1;
+    // Default recidive model (will be updated when recidive count and motif are loaded)
+    _computedRecidive = ContraventionRecidiveModels(
+      label: widget.contravention.motif,
+      nombrerecidive: 1,
+      montant1: 50,
+      montant2: 100,
+      montant3: 200,
+      montant4: 500,
+    );
+  }
+
+  /// Charge le nombre de récidives depuis le backend, puis charge le motif
+  Future<void> _loadRecidiveCount() async {
+    try {
+      final apiService = ApiService();
+      final motif = widget.contravention.motif;
+      final tiersId = widget.contravention.tiersId;
+
+      String? url;
+      if (tiersId != null) {
+        // PRIMARY: Use resident ID (fk_tiers) for recidive counting
+        url =
+            '/contraventions/recidive-count?residentId=$tiersId&motif=${Uri.encodeComponent(motif)}';
+        print(
+          '🔄 [RECIDIVE] Fetching recidive count by residentId=$tiersId, motif=$motif',
+        );
+      } else {
+        // FALLBACK: Use room/building
+        final extracted = ResidentMockService.extractRoomAndBuilding(
+          widget.contravention.residentAdresse,
+        );
+        final numeroChambre = extracted['chamber'];
+        final batiment = extracted['building'];
+
+        if (numeroChambre != null && batiment != null) {
+          url =
+              '/contraventions/recidive-count?numeroChambre=$numeroChambre&batiment=$batiment&motif=${Uri.encodeComponent(motif)}';
+          print(
+            '🔄 [RECIDIVE] Fetching recidive count by room=$numeroChambre, building=$batiment, motif=$motif',
+          );
+        } else {
+          print(
+            '⚠️ [RECIDIVE] No residentId and no room/building — defaulting to 1',
+          );
+        }
       }
 
-      // Will be replaced once motif is loaded
-      _computedRecidive = ContraventionRecidiveModels(
-        label: widget.contravention.motif,
-        nombrerecidive: count,
-        montant1: 50,
-        montant2: 100,
-        montant3: 200,
-        montant4: 500,
-      );
+      if (url != null) {
+        final response = await apiService.get(url);
+
+        if (response.statusCode == 200 && response.data != null) {
+          final nextOccurrence = response.data['nextOccurrence'] as int? ?? 1;
+          print('🔄 [RECIDIVE] Next occurrence: $nextOccurrence');
+
+          if (mounted) {
+            setState(() {
+              _recidiveOccurrence = nextOccurrence;
+              _isLoadingRecidive = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _isLoadingRecidive = false;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoadingRecidive = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ [RECIDIVE] Error loading recidive count: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingRecidive = false;
+        });
+      }
     }
+
+    // After recidive count is loaded, load motif data
+    _loadMotifData();
   }
 
   /// 🎯 Charge le motif depuis le provider et recalcule la récidive
@@ -103,16 +165,11 @@ class _AccepterContraventionScreenState
             _motif = motif;
             _isLoadingMotif = false;
 
-            // Recalculate recidive with motif montants
-            int count = 1;
-            if (widget.history != null) {
-              final motifStr = widget.contravention.motif.trim().toLowerCase();
-              final prevCount =
-                  widget.history!
-                      .where((c) => c.motif.trim().toLowerCase() == motifStr)
-                      .length;
-              count = prevCount + 1;
-            }
+            // Use the recidive occurrence fetched from the backend
+            int count = _recidiveOccurrence;
+            print(
+              '🔄 [RECIDIVE] Recalculating with motif montants: occurrence=$count',
+            );
 
             _computedRecidive = ContraventionRecidiveModels(
               label: widget.contravention.motif,
@@ -183,6 +240,19 @@ class _AccepterContraventionScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Show loading while recidive count is being fetched
+    if (_isLoadingRecidive || _isLoadingMotif) {
+      return Scaffold(
+        backgroundColor: AppTheme.darkBgAlt,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final r = _computedRecidive;
     final bool isRecidive = r.nombrerecidive > 1;
 

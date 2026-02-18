@@ -9,7 +9,7 @@ class FileUploadService {
   late final String baseUrl =
       kIsWeb
           ? 'http://localhost:8080/api/v1/media'
-          : 'http://192.168.8.167:8080/api/v1/media';
+          : 'http://192.168.110.153:8080/api/v1/media';
 
   FileUploadService({required this.dio});
 

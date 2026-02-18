@@ -84,6 +84,7 @@ class Contravention {
   final String ref;
   final String userAuthor;
   final String tiers;
+  final int? tiersId; // Resident ID from backend (fk_tiers)
   final String motif;
   final String? residentAdresse;
   final String? residentName; // Added to represent mock resident name
@@ -97,6 +98,7 @@ class Contravention {
     required this.ref,
     required this.userAuthor,
     required this.tiers,
+    this.tiersId,
     required this.motif,
     this.residentAdresse,
     this.residentName, // Added to constructor
@@ -124,6 +126,7 @@ class Contravention {
 
     // Handle tiers: can be a String (from dashboard) or a Map (from API)
     String tiersStr = '';
+    int? tiersId;
     String? residentAdresse = json['residentAdresse'] as String?;
     final rawTiers = json['tiers'];
     if (rawTiers is String) {
@@ -132,6 +135,8 @@ class Contravention {
       final prenom = (rawTiers['prenom'] as String?) ?? '';
       final nom = (rawTiers['nom'] as String?) ?? '';
       tiersStr = '$prenom $nom'.trim();
+      // Extract resident ID from tiers
+      tiersId = rawTiers['id'] as int?;
       // Try to get adresse from tiers if not already set
       if (residentAdresse == null || residentAdresse.isEmpty) {
         residentAdresse = rawTiers['adresse'] as String?;
@@ -140,16 +145,21 @@ class Contravention {
 
     // Handle motif: can be a String (from dashboard) or extracted from typeContravention (from API)
     String motifStr = json['motif'] as String? ?? '';
-    if (motifStr.isEmpty && json['typeContravention'] != null && json['typeContravention'] is Map) {
+    if (motifStr.isEmpty &&
+        json['typeContravention'] != null &&
+        json['typeContravention'] is Map) {
       final typeMap = json['typeContravention'] as Map<String, dynamic>;
-      motifStr = (typeMap['label'] as String?) ?? (typeMap['nom'] as String?) ?? '';
+      motifStr =
+          (typeMap['label'] as String?) ?? (typeMap['nom'] as String?) ?? '';
     }
 
     // Handle status: backend sends 'statut', dashboard sends 'status'
-    String statusStr = (json['status'] as String?) ?? (json['statut'] as String?) ?? '';
+    String statusStr =
+        (json['status'] as String?) ?? (json['statut'] as String?) ?? '';
 
     // Handle dateTime: backend sends 'dateHeure', dashboard sends 'dateTime'
-    String dateTimeStr = (json['dateTime'] as String?) ?? (json['dateHeure'] as String?) ?? '';
+    String dateTimeStr =
+        (json['dateTime'] as String?) ?? (json['dateHeure'] as String?) ?? '';
 
     return Contravention(
       rowid: json['rowid'] as int?,
@@ -159,16 +169,18 @@ class Contravention {
       ref: json['ref'] as String? ?? '',
       userAuthor: userAuthorStr,
       tiers: tiersStr,
+      tiersId: tiersId,
       motif: motifStr,
       residentAdresse: residentAdresse,
       residentName: json['residentName'] as String?,
-      media: (json['media'] as List<dynamic>? ?? [])
-          .map(
-            (e) => ContraventionMediaModels.fromJson(
-              e as Map<String, dynamic>,
-            ),
-          )
-          .toList(),
+      media:
+          (json['media'] as List<dynamic>? ?? [])
+              .map(
+                (e) => ContraventionMediaModels.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
+              .toList(),
     );
   }
 }

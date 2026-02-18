@@ -20,11 +20,15 @@ import com.uvillage.infractions.dto.ContraventionDTO;
 import com.uvillage.infractions.dto.CreateContraventionRequest;
 import com.uvillage.infractions.entity.Contravention;
 import com.uvillage.infractions.entity.ContraventionMedia;
+import com.uvillage.infractions.entity.ContraventionType;
 import com.uvillage.infractions.entity.Facture;
+import com.uvillage.infractions.entity.Recidive;
+import com.uvillage.infractions.entity.Resident;
 import com.uvillage.infractions.repository.ContraventionMediaRepository;
 import com.uvillage.infractions.repository.ContraventionRepository;
 import com.uvillage.infractions.repository.ContraventionTypeRepository;
 import com.uvillage.infractions.repository.FactureRepository;
+import com.uvillage.infractions.repository.RecidiveRepository;
 import com.uvillage.infractions.repository.ResidentRepository;
 import com.uvillage.infractions.repository.UserRepository;
 
@@ -39,6 +43,9 @@ public class ContraventionService {
     private final ContraventionRepository contraventionRepository;
     private final FactureRepository factureRepository;
     private final ContraventionMediaRepository mediaRepository;
+
+    @Autowired
+    private RecidiveRepository recidiveRepository;
 
     @Autowired
     private InvoicePdfService invoicePdfService;
@@ -186,19 +193,16 @@ public class ContraventionService {
 
     /**
      * Confirme une contravention et génère une facture PDF
-     * 
-     * @param ref           La référence de la contravention
-     * @param numeroChambre Le numéro de chambre du résident (optionnel)
-     * @param batiment      Le bâtiment du résident (optionnel)
-     * @return La contravention mise à jour avec l'URL du PDF
-     * @throws IOException En cas d'erreur lors de la génération du PDF
+     * Le montant est calculé automatiquement en fonction du nombre de récidives
+     * pour le même résident et le même motif.
      */
     @Transactional
     public ContraventionDTO confirmContravention(String ref, String numeroChambre, String batiment) throws IOException {
         Contravention contravention = contraventionRepository.findByRef(ref)
                 .orElseThrow(() -> new RuntimeException("Contravention non trouvée: " + ref));
 
-        contravention.setStatut(Contravention.Status.ACCEPTEE);
+        // NOTE: Do NOT set ACCEPTEE status yet — we must count recidives FIRST,
+        // otherwise Hibernate auto-flush includes the current contravention in the count.
 
         // Store room and building info if provided
         if (numeroChambre != null && !numeroChambre.isEmpty()) {
@@ -216,17 +220,68 @@ public class ContraventionService {
             mockResident = residentMockService.findByRoom(roomNum, building);
         }
 
-        // Générer le PDF avec les données du résident mock
-        String pdfUrl = invoicePdfService.generateInvoicePdf(contravention, mockResident);
+        // ===== RECIDIVE LOGIC =====
+        // Count previous ACCEPTEE contraventions with the same motif for the same resident
+        // Priority: use fk_tiers (resident ID) if available, fallback to room/building
+        ContraventionType contraventionType = contravention.getTypeContravention();
+        int recidiveCount = 0;
+        if (contraventionType != null) {
+            Resident resident = contravention.getTiers();
+            if (resident != null && resident.getId() != null) {
+                // PRIMARY: Count by resident ID (fk_tiers) — works even when room/building are NULL
+                recidiveCount = (int) recidiveRepository.countAcceptedByResidentIdAndType(
+                        resident.getId(), contraventionType.getLabel());
+                logger.info("🔄 [RECIDIVE] Count by residentId={}, motif={}: {}",
+                        resident.getId(), contraventionType.getLabel(), recidiveCount);
+            } else if (roomNum != null && building != null) {
+                // FALLBACK: Count by room/building (for anonymous contraventions without a resident)
+                recidiveCount = (int) recidiveRepository.countAcceptedByRoomBuildingAndType(
+                        roomNum, building, contraventionType.getLabel());
+                logger.info("🔄 [RECIDIVE] Count by room={}, building={}, motif={}: {}",
+                        roomNum, building, contraventionType.getLabel(), recidiveCount);
+            } else {
+                logger.warn("⚠️ [RECIDIVE] No resident ID and no room/building — cannot count recidives");
+            }
+        }
 
-        // Créer et sauvegarder la facture (resident peut être null pour maintenant)
+        // recidiveCount = number of previously ACCEPTED contraventions with same motif for same resident
+        // This current one makes it recidiveCount + 1 (1 = first time, 2 = 2nd time, etc.)
+        int occurrence = recidiveCount + 1;
+
+        // NOW set ACCEPTEE status (after counting, so the count is correct)
+        contravention.setStatut(Contravention.Status.ACCEPTEE);
+        logger.info("🔄 [RECIDIVE] This is occurrence #{} for motif '{}'", occurrence, 
+                contraventionType != null ? contraventionType.getLabel() : "unknown");
+
+        // Select the appropriate montant based on recidive count
+        Double montant = 0.0;
+        if (contraventionType != null) {
+            switch (occurrence) {
+                case 1:
+                    montant = contraventionType.getMontant1();
+                    break;
+                case 2:
+                    montant = contraventionType.getMontant2();
+                    break;
+                case 3:
+                    montant = contraventionType.getMontant3();
+                    break;
+                default: // 4th time and beyond
+                    montant = contraventionType.getMontant4();
+                    break;
+            }
+            logger.info("💰 [RECIDIVE] Montant selected: {} DH (occurrence #{})", montant, occurrence);
+        }
+
+        // Générer le PDF avec les données du résident mock et le bon montant
+        String pdfUrl = invoicePdfService.generateInvoicePdf(contravention, mockResident, montant, occurrence);
+
+        // Créer et sauvegarder la facture avec le montant correct selon la récidive
         Facture facture = Facture.builder()
                 .refFacture("FAC-" + contravention.getRef() + "-" + UUID.randomUUID().toString().substring(0, 8))
-                .resident(contravention.getTiers()) // Laisse null pour maintenant
+                .resident(contravention.getTiers())
                 .dateCreation(LocalDateTime.now())
-                .montantTotal(contravention.getTypeContravention() != null
-                        ? contravention.getTypeContravention().getMontant1()
-                        : 0.0)
+                .montantTotal(montant)
                 .statut(Facture.Status.IMPAYE)
                 .pdfUrl(pdfUrl)
                 .build();
@@ -238,5 +293,27 @@ public class ContraventionService {
         contraventionRepository.save(contravention);
 
         return getByRef(ref);
+    }
+
+    /**
+     * Get the recidive count for a given room/building and contravention type label.
+     * Returns the number of times this motif has been ACCEPTED for this location.
+     */
+    public int getRecidiveCount(String numeroChambre, String batiment, String motifLabel) {
+        if (numeroChambre == null || batiment == null || motifLabel == null) {
+            return 0;
+        }
+        return (int) recidiveRepository.countAcceptedByRoomBuildingAndType(numeroChambre, batiment, motifLabel);
+    }
+
+    /**
+     * Get the recidive count for a given resident ID and contravention type label.
+     * This is the PRIMARY method — uses resident ID (fk_tiers) to count previous ACCEPTEE contraventions.
+     */
+    public int getRecidiveCountByResident(Long residentId, String motifLabel) {
+        if (residentId == null || motifLabel == null) {
+            return 0;
+        }
+        return (int) recidiveRepository.countAcceptedByResidentIdAndType(residentId, motifLabel);
     }
 }
