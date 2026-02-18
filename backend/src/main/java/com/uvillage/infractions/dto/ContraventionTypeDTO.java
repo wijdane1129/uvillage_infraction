@@ -23,10 +23,15 @@ public class ContraventionTypeDTO {
     private String dateCreation;
     private Boolean supprime;
 
-    // Minimal mapping from entity (backward compatible with old version)
+    // Minimal mapping from entity (includes montants for resident history)
     public static ContraventionTypeDTO fromEntity(ContraventionType type) {
         return type == null ? null : ContraventionTypeDTO.builder()
+                .id(type.getRowid())
                 .nom(type.getLabel())
+                .montant1(type.getMontant1())
+                .montant2(type.getMontant2())
+                .montant3(type.getMontant3())
+                .montant4(type.getMontant4())
                 .build();
     }
 

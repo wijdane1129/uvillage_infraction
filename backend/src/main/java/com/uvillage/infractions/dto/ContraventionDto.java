@@ -21,6 +21,7 @@ public class ContraventionDTO {
     private List<MediaDTO> media;
     private String residentAdresse;
     private String facturePdfUrl;
+    private Double montant;
 
     public ContraventionDTO() {
     }
@@ -64,6 +65,14 @@ public class ContraventionDTO {
 
     public void setFacturePdfUrl(String facturePdfUrl) {
         this.facturePdfUrl = facturePdfUrl;
+    }
+
+    public Double getMontant() {
+        return montant;
+    }
+
+    public void setMontant(Double montant) {
+        this.montant = montant;
     }
 
     public String getStatut() {
@@ -143,11 +152,16 @@ public class ContraventionDTO {
 
         dto.setTiers(TiersDTO.fromEntity(contravention.getTiers()));
 
-        // Set facture PDF URL if available (wrapped in try-catch for lazy-loading
+        // Set facture PDF URL and montant if available (wrapped in try-catch for lazy-loading
         // safety)
         try {
-            if (contravention.getFacture() != null && contravention.getFacture().getPdfUrl() != null) {
-                dto.setFacturePdfUrl(contravention.getFacture().getPdfUrl());
+            if (contravention.getFacture() != null) {
+                if (contravention.getFacture().getPdfUrl() != null) {
+                    dto.setFacturePdfUrl(contravention.getFacture().getPdfUrl());
+                }
+                if (contravention.getFacture().getMontantTotal() != null) {
+                    dto.setMontant(contravention.getFacture().getMontantTotal());
+                }
             }
         } catch (Exception e) {
             // Facture not loaded (lazy init) — skip silently

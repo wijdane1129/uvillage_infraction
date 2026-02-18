@@ -5,12 +5,21 @@ import '../providers/contraventions_provider.dart';
 import '../models/resident_models.dart';
 import '../gen_l10n/app_localizations.dart';
 
+// Providers pour la recherche
+final _residentSearchQueryProvider = StateProvider<String>((ref) => '');
+final _residentBatimentFilterProvider = StateProvider<String>((ref) => '');
+final _residentChambreFilterProvider = StateProvider<String>((ref) => '');
+
 class ResidentsScreen extends ConsumerWidget {
   const ResidentsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final residentsAsync = ref.watch(residentsListProvider);
+    final searchQuery = ref.watch(_residentSearchQueryProvider).toLowerCase();
+    final batimentFilter = ref.watch(_residentBatimentFilterProvider);
+    final chambreFilter =
+        ref.watch(_residentChambreFilterProvider).toLowerCase();
     final locale = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -19,55 +28,234 @@ class ResidentsScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFF1a1a2e),
         elevation: 0,
       ),
-      body: residentsAsync.when(
-        data: (residents) {
-          if (residents.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 64,
-                    color: Colors.grey.shade600,
+      body: Column(
+        children: [
+          // Barre de recherche par nom
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              onChanged: (value) {
+                ref.read(_residentSearchQueryProvider.notifier).state = value;
+              },
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Rechercher par nom...',
+                hintStyle: TextStyle(color: Colors.grey.shade500),
+                prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                filled: true,
+                fillColor: const Color(0xFF16213e),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade700),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF00d4ff)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          // Filtres Bâtiment + Chambre
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Row(
+              children: [
+                // Dropdown Bâtiment
+                Expanded(
+                  child: residentsAsync.when(
+                    data: (residents) {
+                      final batiments =
+                          residents
+                              .map((r) => r.batiment)
+                              .where((b) => b.isNotEmpty)
+                              .toSet()
+                              .toList()
+                            ..sort();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16213e),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade700),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value:
+                                batimentFilter.isEmpty ? null : batimentFilter,
+                            hint: Text(
+                              'Bâtiment',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 14,
+                              ),
+                            ),
+                            icon: Icon(
+                              Icons.apartment,
+                              color: Colors.grey.shade400,
+                              size: 20,
+                            ),
+                            dropdownColor: const Color(0xFF16213e),
+                            isExpanded: true,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: '',
+                                child: Text(
+                                  'Tous',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                              ),
+                              ...batiments.map(
+                                (b) => DropdownMenuItem<String>(
+                                  value: b,
+                                  child: Text('Bât. $b'),
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              ref
+                                  .read(
+                                    _residentBatimentFilterProvider.notifier,
+                                  )
+                                  .state = value ?? '';
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucun résident trouvé',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 18,
+                ),
+                const SizedBox(width: 8),
+                // Champ Numéro Chambre
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) {
+                      ref.read(_residentChambreFilterProvider.notifier).state =
+                          value;
+                    },
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'N° Chambre',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.door_front_door_outlined,
+                        color: Colors.grey.shade400,
+                        size: 20,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF16213e),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade700),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade700),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF00d4ff)),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Liste des résidents
+          Expanded(
+            child: residentsAsync.when(
+              data: (residents) {
+                // Filtrer par nom, bâtiment et chambre
+                var filtered =
+                    residents.where((r) {
+                      // Filtre nom
+                      if (searchQuery.isNotEmpty) {
+                        final matchName =
+                            r.fullName.toLowerCase().contains(searchQuery) ||
+                            r.nom.toLowerCase().contains(searchQuery) ||
+                            r.prenom.toLowerCase().contains(searchQuery);
+                        if (!matchName) return false;
+                      }
+                      // Filtre bâtiment
+                      if (batimentFilter.isNotEmpty &&
+                          r.batiment != batimentFilter) {
+                        return false;
+                      }
+                      // Filtre chambre
+                      if (chambreFilter.isNotEmpty &&
+                          !r.numeroChambre.toLowerCase().contains(
+                            chambreFilter,
+                          )) {
+                        return false;
+                      }
+                      return true;
+                    }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 64,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Aucun résultat trouvé',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final resident = filtered[index];
+
+                    return ResidentCardWithContraventionsAsync(
+                      resident: resident,
+                      locale: locale,
+                      onTap: () {},
+                    );
+                  },
+                );
+              },
+              loading:
+                  () => const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF00d4ff),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: residents.length,
-            itemBuilder: (context, index) {
-              final resident = residents[index];
-
-              return ResidentCardWithContraventionsAsync(
-                resident: resident,
-                locale: locale,
-                onTap: () {
-                  // Juste afficher les détails dans la carte
-                },
-              );
-            },
-          );
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00d4ff)),
+              error: (error, stack) => Center(child: Text('Erreur: $error')),
+            ),
           ),
-        ),
-        error: (error, stack) => Center(
-          child: Text('Erreur: $error'),
-        ),
+        ],
       ),
     );
   }
@@ -88,8 +276,9 @@ class ResidentCardWithContraventionsAsync extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final contraventionsAsync =
-        ref.watch(residentContraventionsProvider(resident.id));
+    final contraventionsAsync = ref.watch(
+      residentContraventionsProvider(resident.id),
+    );
 
     return contraventionsAsync.when(
       data: (contraventions) {
@@ -121,10 +310,7 @@ class ResidentCardWithContraventionsAsync extends ConsumerWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF16213e),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade700,
-          width: 0.5,
-        ),
+        border: Border.all(color: Colors.grey.shade700, width: 0.5),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -144,10 +330,7 @@ class ResidentCardWithContraventionsAsync extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${resident.batiment}-${resident.numeroChambre}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade400,
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                 ),
               ],
             ),
@@ -183,19 +366,19 @@ class ResidentCardWithContraventions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final paymentColor = resident.statutPaiement == 'Payé'
-        ? Colors.green
-        : Colors.orange;
-    final paymentIcon = resident.statutPaiement == 'Payé'
-        ? Icons.check_circle
-        : Icons.schedule;
+    final paymentColor =
+        resident.statutPaiement == 'Payé' ? Colors.green : Colors.orange;
+    final paymentIcon =
+        resident.statutPaiement == 'Payé' ? Icons.check_circle : Icons.schedule;
 
     // Calculer les statistiques
     final totalInfractions = contraventions.length;
     final unpaidCount =
         contraventions.where((c) => c['statut'] == 'Impayée').length;
     final totalAmount = contraventions.fold<double>(
-        0, (sum, c) => sum + (c['montant'] as num).toDouble());
+      0,
+      (sum, c) => sum + (c['montant'] as num).toDouble(),
+    );
 
     return GestureDetector(
       onTap: onTap,
@@ -204,10 +387,7 @@ class ResidentCardWithContraventions extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF16213e),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.grey.shade700,
-            width: 0.5,
-          ),
+          border: Border.all(color: Colors.grey.shade700, width: 0.5),
         ),
         child: Column(
           children: [
@@ -256,11 +436,7 @@ class ResidentCardWithContraventions extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              paymentIcon,
-                              size: 16,
-                              color: paymentColor,
-                            ),
+                            Icon(paymentIcon, size: 16, color: paymentColor),
                             const SizedBox(width: 4),
                             Text(
                               resident.statutPaiement,
@@ -300,7 +476,7 @@ class ResidentCardWithContraventions extends StatelessWidget {
                       Expanded(
                         child: _StatBadge(
                           label: 'Montant Total',
-                          value: '€${totalAmount.toStringAsFixed(0)}',
+                          value: '${totalAmount.toStringAsFixed(0)} DH',
                           color: Colors.red,
                           icon: Icons.euro,
                         ),
@@ -313,10 +489,7 @@ class ResidentCardWithContraventions extends StatelessWidget {
 
             // Historique des contraventions
             if (contraventions.isNotEmpty) ...[
-              Container(
-                height: 1,
-                color: Colors.grey.shade700,
-              ),
+              Container(height: 1, color: Colors.grey.shade700),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -332,12 +505,11 @@ class ResidentCardWithContraventions extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Column(
-                      children: contraventions
-                          .asMap()
-                          .entries
-                          .map((entry) {
+                      children:
+                          contraventions.asMap().entries.map((entry) {
                             final infraction = entry.value;
-                            final isLast = entry.key == contraventions.length - 1;
+                            final isLast =
+                                entry.key == contraventions.length - 1;
                             final statusColor =
                                 infraction['statut'] == 'Payée'
                                     ? Colors.green
@@ -364,13 +536,58 @@ class ResidentCardWithContraventions extends StatelessWidget {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            infraction['motif'],
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  infraction['motif'],
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              // Badge récidive
+                                              if (infraction['occurrence'] !=
+                                                      null &&
+                                                  (infraction['occurrence']
+                                                          as int) >
+                                                      1) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.orange
+                                                        .withOpacity(0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: Colors.orange
+                                                          .withOpacity(0.5),
+                                                      width: 0.5,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    '${infraction['occurrence']}x',
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.orange,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
@@ -388,11 +605,18 @@ class ResidentCardWithContraventions extends StatelessWidget {
                                           CrossAxisAlignment.end,
                                       children: [
                                         Text(
-                                          '€${infraction['montant']}',
-                                          style: const TextStyle(
+                                          '${infraction['montant']} DH',
+                                          style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.red,
+                                            color:
+                                                (infraction['occurrence'] !=
+                                                            null &&
+                                                        (infraction['occurrence']
+                                                                as int) >
+                                                            1)
+                                                    ? Colors.orange
+                                                    : Colors.red,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
@@ -402,10 +626,10 @@ class ResidentCardWithContraventions extends StatelessWidget {
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color:
-                                                statusColor.withOpacity(0.2),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
+                                            color: statusColor.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
                                           child: Text(
                                             infraction['statut'],
@@ -433,8 +657,7 @@ class ResidentCardWithContraventions extends StatelessWidget {
                                 ],
                               ],
                             );
-                          })
-                          .toList(),
+                          }).toList(),
                     ),
                   ],
                 ),
@@ -480,21 +703,14 @@ class _StatBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                size: 13,
-                color: color,
-              ),
+              Icon(icon, size: 13, color: color),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
